@@ -1,0 +1,13 @@
+[package]
+name = "stravant/dragger-handler"
+description = "A module exposing a simple interface for selecting a clone of the Studio Select tool."
+version = "0.1.3"
+license = "MIT"
+authors = ["Mark Langen <stravant@gmail.com>"]
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+DraggerFramework = "stravant/draggerframework@0.1.4"
+DraggerSchemaCore = "stravant/draggerschemacore@0.1.5"
+Roact = "roblox/roact@1.4.4"

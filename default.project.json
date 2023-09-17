@@ -1,0 +1,13 @@
+{
+	"name": "ResizeAlign v1.3.1",
+	"tree": {
+		"$className": "Folder",
+		"Src": {
+			"$path": "src"
+		},
+		"Packages": {
+			"$path": "Packages"
+		},
+		"$path": "extra"
+	}
+}
