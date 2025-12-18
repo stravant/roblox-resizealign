@@ -1,23 +1,68 @@
---!nolint DeprecatedApi
--- Disabled because we still need to copy CollisionGroupId for
--- legacy support even though it's deprecated.
+local ReflectionService = game:GetService("ReflectionService")
+
+local BASE_PART_PROPS = {} :: { string }
+local IGNORE_PROPS = {
+	archivable = true,
+	brickColor = true,
+	BrickColor = true,
+	Orientation = true,
+	Position = true,
+	Rotation = true,
+	CFrame = true,
+	PivotOffset = true,
+	FrontParamA = true,
+	FrontParamB = true,
+	FrontSurface = true,
+	FrontSurfaceInput = true,
+	LeftParamA = true,
+	LeftParamB = true,
+	LeftSurface = true,
+	LeftSurfaceInput = true,
+	LocalTransparencyModifier = true,
+	RightParamA = true,
+	RightParamB = true,
+	RightSurface = true,
+	RightSurfaceInput = true,
+	TopSurfaceInput = true,
+	TopSurface = true,
+	TopParamB = true,
+	TopParamA = true,
+	BackParamA = true,
+	BackParamB = true,
+	BackSurface = true,
+	BackSurfaceInput = true,
+	BottomParamA = true,
+	BottomParamB = true,
+	BottomSurface = true,
+	BottomSurfaceInput = true,
+	Name = true,
+	Parent = true,
+}
+
+local testPart = Instance.new("Part")
+
+for _, property in ReflectionService:GetPropertiesOfClass("BasePart") do
+	local name = property.Name :: string
+
+	-- not copying these properties
+	if IGNORE_PROPS[name] then
+		continue
+	end
+
+	local canWrite = pcall(function(name)
+		(testPart :: any)[name] = (testPart :: any)[name]
+	end, name)
+	print(canWrite)
+
+	if canWrite then
+		table.insert(BASE_PART_PROPS, name)
+	end
+end
+
+testPart:Destroy()
 
 return function(fromPart: BasePart, toPart: BasePart)
-	toPart.Anchored     = fromPart.Anchored
-	toPart.Massless     = fromPart.Massless
-	toPart.RootPriority = fromPart.RootPriority
-	toPart.CustomPhysicalProperties = fromPart.CustomPhysicalProperties
-	--
-	toPart.CanCollide   = fromPart.CanCollide
-	toPart.CanTouch     = fromPart.CanTouch
-	toPart.CanQuery     = fromPart.CanQuery
-	toPart.CollisionGroupId = fromPart.CollisionGroupId
-	toPart.CollisionGroup = fromPart.CollisionGroup
-	--
-	toPart.Color        = fromPart.Color
-	toPart.CastShadow   = fromPart.CastShadow
-	toPart.Material     = fromPart.Material
-	toPart.Reflectance  = fromPart.Reflectance
-	toPart.Transparency = fromPart.Transparency
-	toPart.MaterialVariant = fromPart.MaterialVariant
+	for _, property in BASE_PART_PROPS do
+		(toPart :: any)[property] = (fromPart :: any)[property]
+	end
 end
