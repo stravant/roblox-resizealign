@@ -1,23 +1,15 @@
---!nolint DeprecatedApi
--- Disabled because we still need to copy CollisionGroupId for
--- legacy support even though it's deprecated.
+local ReflectionService = game:GetService("ReflectionService")
+
+local BASE_PART_PROPS = {} :: { string }
+
+for _, property in ReflectionService:GetPropertiesOfClass("BasePart") do
+	if property.Permits.Write and property.Permits.Read and property.Serialized then
+		table.insert(BASE_PART_PROPS, property.Name :: string)
+	end
+end
 
 return function(fromPart: BasePart, toPart: BasePart)
-	toPart.Anchored     = fromPart.Anchored
-	toPart.Massless     = fromPart.Massless
-	toPart.RootPriority = fromPart.RootPriority
-	toPart.CustomPhysicalProperties = fromPart.CustomPhysicalProperties
-	--
-	toPart.CanCollide   = fromPart.CanCollide
-	toPart.CanTouch     = fromPart.CanTouch
-	toPart.CanQuery     = fromPart.CanQuery
-	toPart.CollisionGroupId = fromPart.CollisionGroupId
-	toPart.CollisionGroup = fromPart.CollisionGroup
-	--
-	toPart.Color        = fromPart.Color
-	toPart.CastShadow   = fromPart.CastShadow
-	toPart.Material     = fromPart.Material
-	toPart.Reflectance  = fromPart.Reflectance
-	toPart.Transparency = fromPart.Transparency
-	toPart.MaterialVariant = fromPart.MaterialVariant
+	for _, property in BASE_PART_PROPS do
+		(toPart :: any)[property] = (fromPart :: any)[property]
+	end
 end
