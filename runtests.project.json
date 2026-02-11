@@ -1,8 +1,5 @@
 {
-	"name": "ResizeAlign V2.0",
-	"globIgnorePaths": [
-		"**/*.spec.lua"
-	],
+	"name": "ResizeAlign",
 	"tree": {
 		"$className": "Folder",
 		"Src": {
@@ -12,7 +9,7 @@
 			"$path": "Packages"
 		},
 		"Loader": {
-			"$path": "loader.server.lua"
+			"$path": "runtests.server.lua"
 		}
 	}
 }

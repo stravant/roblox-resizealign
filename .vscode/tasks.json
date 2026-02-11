@@ -1,13 +1,80 @@
 {
-	// See https://go.microsoft.com/fwlink/?LinkId=733558
-	// for the documentation about the tasks.json format
+	// See https://code.visualstudio.com/docs/editor/tasks for more information
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "echo",
+			"label": "Rojo Build",
 			"type": "shell",
-			"group": "build",
-			"command": ["python build.py"]
+			"command": "rojo",
+			"args": [
+				"build",
+				"-p",
+				"ResizeAlign V2.0.rbxmx"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Rojo Build with Watch",
+			"type": "shell",
+			"command": "rojo",
+			"args": [
+				"build",
+				"-p",
+				"ResizeAlign V2.0.rbxmx",
+				"--watch"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Sourcemap gen",
+			"type": "shell",
+			"command": "rojo",
+			"args": [
+				"sourcemap",
+				"default.project.json",
+				"--output",
+				"sourcemap.json",
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Sourcemap type patch",
+			"type": "shell",
+			"command": "wally-package-types",
+			"args": [
+				"--sourcemap",
+				"sourcemap.json",
+				"Packages"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Run tests",
+			"type": "shell",
+			"command": "python",
+			"args": [
+				"runtests.py"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
 		}
 	]
 }
