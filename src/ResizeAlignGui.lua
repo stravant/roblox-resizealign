@@ -51,128 +51,59 @@ local function ResizeMethodPanel(props: {
 	LayoutOrder: number?,
 })
 	local current = props.Settings.ResizeMode
+
+	local function makeButton(text: string, mode: Settings.ResizeMode, helpText: string, layoutOrder: number)
+		return e(HelpGui.WithHelpIcon, {
+			LayoutOrder = layoutOrder,
+			Subject = e("Frame", {
+				Size = UDim2.new(1, 0, 0, 36),
+				BackgroundTransparency = 1,
+			}, {
+				Layout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 4),
+				}),
+				Button = e(ChipForToggle, {
+					Text = text,
+					IsCurrent = current == mode,
+					Height = 36,
+					LayoutOrder = 1,
+					OnClick = function()
+						props.Settings.ResizeMode = mode
+						props.UpdatedSettings()
+					end,
+				}),
+				Demo = e(ModeDemo, {
+					ResizeMode = mode,
+					Animate = current == mode,
+					Size = UDim2.fromOffset(72, 36),
+					LayoutOrder = 2,
+				}),
+			}),
+			Help = e(HelpGui.BasicTooltip, {
+				HelpRichText = helpText,
+			}),
+		})
+	end
+
 	return e(SubPanel, {
 		Title = "Resize Method",
 		LayoutOrder = props.LayoutOrder,
 		Padding = UDim.new(0, 4),
 	}, {
-		Buttons = e(HelpGui.WithHelpIcon, {
-			LayoutOrder = 2,
-			Subject = e("Frame", {
-				Size = UDim2.fromScale(1, 0),
-				AutomaticSize = Enum.AutomaticSize.Y,
-				BackgroundTransparency = 1,
-			}, {
-				ListLayout = e("UIListLayout", {
-					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 4),
-				}),
-				Row1 = e("Frame", {
-					Size = UDim2.fromScale(1, 0),
-					AutomaticSize = Enum.AutomaticSize.Y,
-					BackgroundTransparency = 1,
-					LayoutOrder = 1,
-				}, {
-					ListLayout = e("UIListLayout", {
-						FillDirection = Enum.FillDirection.Horizontal,
-						SortOrder = Enum.SortOrder.LayoutOrder,
-						Padding = UDim.new(0, 4),
-					}),
-					OuterTouch = e(ChipForToggle, {
-						Text = "Outer Touch",
-						IsCurrent = current == "OuterTouch",
-						LayoutOrder = 1,
-						OnClick = function()
-							props.Settings.ResizeMode = "OuterTouch"
-							props.UpdatedSettings()
-						end,
-					}),
-					InnerTouch = e(ChipForToggle, {
-						Text = "Inner Touch",
-						IsCurrent = current == "InnerTouch",
-						LayoutOrder = 2,
-						OnClick = function()
-							props.Settings.ResizeMode = "InnerTouch"
-							props.UpdatedSettings()
-						end,
-					}),
-				}),
-				Row2 = e("Frame", {
-					Size = UDim2.fromScale(1, 0),
-					AutomaticSize = Enum.AutomaticSize.Y,
-					BackgroundTransparency = 1,
-					LayoutOrder = 2,
-				}, {
-					ListLayout = e("UIListLayout", {
-						FillDirection = Enum.FillDirection.Horizontal,
-						SortOrder = Enum.SortOrder.LayoutOrder,
-						Padding = UDim.new(0, 4),
-					}),
-					RoundedJoin = e(ChipForToggle, {
-						Text = "Rounded Join",
-						IsCurrent = current == "RoundedJoin",
-						LayoutOrder = 1,
-						OnClick = function()
-							props.Settings.ResizeMode = "RoundedJoin"
-							props.UpdatedSettings()
-						end,
-					}),
-					ButtJoint = e(ChipForToggle, {
-						Text = "Butt Joint",
-						IsCurrent = current == "ButtJoint",
-						LayoutOrder = 2,
-						OnClick = function()
-							props.Settings.ResizeMode = "ButtJoint"
-							props.UpdatedSettings()
-						end,
-					}),
-				}),
-				Row3 = e("Frame", {
-					Size = UDim2.fromScale(1, 0),
-					AutomaticSize = Enum.AutomaticSize.Y,
-					BackgroundTransparency = 1,
-					LayoutOrder = 3,
-				}, {
-					ListLayout = e("UIListLayout", {
-						FillDirection = Enum.FillDirection.Horizontal,
-						SortOrder = Enum.SortOrder.LayoutOrder,
-						Padding = UDim.new(0, 4),
-					}),
-					ExtendUpTo = e(ChipForToggle, {
-						Text = "Extend Up To",
-						IsCurrent = current == "ExtendUpTo",
-						LayoutOrder = 1,
-						OnClick = function()
-							props.Settings.ResizeMode = "ExtendUpTo"
-							props.UpdatedSettings()
-						end,
-					}),
-					ExtendInto = e(ChipForToggle, {
-						Text = "Extend Into",
-						IsCurrent = current == "ExtendInto",
-						LayoutOrder = 2,
-						OnClick = function()
-							props.Settings.ResizeMode = "ExtendInto"
-							props.UpdatedSettings()
-						end,
-					}),
-				}),
-			}),
-			Help = e(HelpGui.BasicTooltip, {
-				HelpRichText =
-					"How to resize the parts:\n" ..
-					"<b>•Outer Touch</b> — Extend until faces align at their outermost points.\n" ..
-					"<b>•Inner Touch</b> — Extend until faces align at their innermost points.\n" ..
-					"<b>•Rounded Join</b> — Meet at the middle with a rounded filler.\n" ..
-					"<b>•Butt Joint</b> — First face butts up against the second (right angles only).\n" ..
-					"<b>•Extend Up To</b> — First face extended to just touch the second.\n" ..
-					"<b>•Extend Into</b> — First face extended to fully penetrate the second.",
-			}),
-		}),
-		Demo = e(ModeDemo, {
-			ResizeMode = props.Settings.ResizeMode,
-			LayoutOrder = 1,
-		}),
+		OuterTouch = makeButton("Outer Touch", "OuterTouch",
+			"Extend both parts until their faces align at the outermost points. Good for sealing up non-right-angle joints.", 1),
+		InnerTouch = makeButton("Inner Touch", "InnerTouch",
+			"Extend both parts until their faces align at the innermost points.", 2),
+		RoundedJoin = makeButton("Rounded Join", "RoundedJoin",
+			"Both parts meet at the middle and any exposed gap is filled with a sphere or cylinder. Works best on faces which are the same size.", 3),
+		ButtJoint = makeButton("Butt Joint", "ButtJoint",
+			"The first face butts up against the side of the second, with no overlap. Only works for right-angle intersections.", 4),
+		ExtendUpTo = makeButton("Extend Up To", "ExtendUpTo",
+			"Only the first face is extended out until it just touches the second face.", 5),
+		ExtendInto = makeButton("Extend Into", "ExtendInto",
+			"Only the first face is extended out until it fully penetrates the second face.", 6),
 	})
 end
 

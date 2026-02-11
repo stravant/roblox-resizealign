@@ -10,6 +10,7 @@ local Colors = require("./Colors")
 local function ChipWithOutline(props: {
 	Text: string,
 	LayoutOrder: number?,
+	Height: number?,
 	TextColor3: Color3,
 	Bolded: boolean,
 	BorderColor3: Color3,
@@ -39,7 +40,7 @@ local function ChipWithOutline(props: {
 	end
 
 	return e("TextButton", {
-		Size = UDim2.new(0, 0, 0, 24),
+		Size = UDim2.new(0, 0, 0, props.Height or 24),
 		BackgroundColor3 = props.BackgroundColor3,
 		TextColor3 = props.TextColor3,
 		RichText = true,
@@ -56,6 +57,7 @@ end
 local function ChipForToggle(props: {
 	Text: string,
 	LayoutOrder: number?,
+	Height: number?,
 	IsCurrent: boolean,
 	OnClick: () -> (),
 })
@@ -68,6 +70,7 @@ local function ChipForToggle(props: {
 		Bolded = isCurrent,
 		BackgroundColor3 = Colors.ACTION_BLUE,
 		LayoutOrder = props.LayoutOrder,
+		Height = props.Height,
 		ZIndex = if isCurrent then 2 else 1,
 		OnClick = props.OnClick,
 	}, {

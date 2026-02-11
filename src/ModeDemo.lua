@@ -9,8 +9,8 @@ local e = React.createElement
 
 type ResizeMode = Settings.ResizeMode
 
-local PART_A_COLOR = Color3.fromRGB(220, 50, 50)
-local PART_B_COLOR = Color3.fromRGB(50, 50, 220)
+local PART_A_COLOR = Color3.fromRGB(200, 50, 50)
+local PART_B_COLOR = Color3.fromRGB(50, 80, 220)
 local FILLER_COLOR = Color3.fromRGB(80, 200, 50)
 
 --------------------------------------------------------------------------------
@@ -215,16 +215,16 @@ end
 
 -- Angled scene: Part A horizontal, Part B at 45 degrees (thicker, narrower)
 local ANG_A: FaceSpec = {
-	cf = CFrame.new(-1.5, -0.2, 0),
+	cf = CFrame.new(-1.8, -0.2, 0),
 	size = Vector3.new(2, 1.0, 0.8),
 	face = Enum.NormalId.Right,
 }
 local ANG_B: FaceSpec = {
-	cf = CFrame.new(1.2, 1.2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-	size = Vector3.new(2, 1.0, 0.8),
+	cf = CFrame.new(1.4, 1.4, 0) * CFrame.Angles(0, 0, math.rad(45)),
+	size = Vector3.new(3, 1.0, 0.8),
 	face = Enum.NormalId.Left,
 }
-local ANG_CAM = CFrame.lookAt(Vector3.new(0.1, 0.4, 5), Vector3.new(0.1, 0.4, 0))
+local ANG_CAM = CFrame.lookAt(Vector3.new(0.5, 0.4, 5), Vector3.new(0.5, 0.4, 0))
 
 -- Right-angle scene: Part A horizontal, Part B vertical with bottom face selected
 local RT_A: FaceSpec = {
@@ -237,7 +237,7 @@ local RT_B: FaceSpec = {
 	size = Vector3.new(1.5, 2, 0.8),
 	face = Enum.NormalId.Bottom,
 }
-local RT_CAM = CFrame.lookAt(Vector3.new(0.5, 0, 4), Vector3.new(0.5, 0, 0))
+local RT_CAM = CFrame.lookAt(Vector3.new(0.9, 0, 4), Vector3.new(0.9, 0, 0))
 
 --------------------------------------------------------------------------------
 -- Build demo data for each mode
@@ -271,9 +271,12 @@ local DEMO_DATA: { [ResizeMode]: any } = {
 
 local function ModeDemo(props: {
 	ResizeMode: ResizeMode,
+	Animate: boolean?,
+	Size: UDim2?,
 	LayoutOrder: number?,
 })
 	local mode = props.ResizeMode
+	local animate = if props.Animate ~= nil then props.Animate else true
 	local data = DEMO_DATA[mode]
 
 	local viewportRef = React.useRef(nil :: any)
@@ -292,8 +295,37 @@ local function ModeDemo(props: {
 		end
 	end)
 
-	-- Animation loop, restarts when mode changes
+	-- When not animating, snap to end state
 	React.useEffect(function()
+		if animate then
+			return
+		end
+		local partA = partARef.current
+		local partB = partBRef.current
+		local filler = fillerRef.current
+		local highlight = highlightRef.current
+		if partA then
+			partA.CFrame = data.partAEnd.CFrame
+			partA.Size = data.partAEnd.Size
+		end
+		if partB then
+			partB.CFrame = data.partBEnd.CFrame
+			partB.Size = data.partBEnd.Size
+		end
+		if filler and data.filler then
+			filler.Transparency = 0
+		end
+		if highlight then
+			highlight.Transparency = 0
+		end
+	end, { animate, mode } :: { any })
+
+	-- Animation loop, only runs when animate is true
+	React.useEffect(function()
+		if not animate then
+			return
+		end
+
 		local thread = task.spawn(function()
 			while true do
 				local partA = partARef.current
@@ -347,15 +379,21 @@ local function ModeDemo(props: {
 		return function()
 			task.cancel(thread)
 		end
-	end, { mode } :: { any })
+	end, { animate, mode } :: { any })
+
+	-- Use end state for initial render when not animating
+	local initA = if animate then data.partAStart else data.partAEnd
+	local initB = if animate then data.partBStart else data.partBEnd
+	local initFillerTransparency = if animate then 1 else 0
+	local initHighlightTransparency = if animate then 1 else 0
 
 	-- Build WorldModel children
 	local worldChildren: { [string]: any } = {
 		PartA = e("Part", {
 			ref = partARef,
 			Anchored = true,
-			CFrame = data.partAStart.CFrame,
-			Size = data.partAStart.Size,
+			CFrame = initA.CFrame,
+			Size = initA.Size,
 			Color = PART_A_COLOR,
 			Material = Enum.Material.SmoothPlastic,
 			TopSurface = Enum.SurfaceType.Smooth,
@@ -364,8 +402,8 @@ local function ModeDemo(props: {
 		PartB = e("Part", {
 			ref = partBRef,
 			Anchored = true,
-			CFrame = data.partBStart.CFrame,
-			Size = data.partBStart.Size,
+			CFrame = initB.CFrame,
+			Size = initB.Size,
 			Color = PART_B_COLOR,
 			Material = Enum.Material.SmoothPlastic,
 			TopSurface = Enum.SurfaceType.Smooth,
@@ -382,7 +420,7 @@ local function ModeDemo(props: {
 			Size = data.filler.Size,
 			Color = FILLER_COLOR,
 			Material = Enum.Material.SmoothPlastic,
-			Transparency = 1,
+			Transparency = initFillerTransparency,
 			TopSurface = Enum.SurfaceType.Smooth,
 			BottomSurface = Enum.SurfaceType.Smooth,
 		})
@@ -393,15 +431,15 @@ local function ModeDemo(props: {
 		Anchored = true,
 		Shape = Enum.PartType.Ball,
 		CFrame = CFrame.new(data.highlightPoint),
-		Size = Vector3.new(0.18, 0.18, 0.18),
+		Size = Vector3.new(0.28, 0.28, 0.28),
 		Color = Color3.fromRGB(255, 255, 80),
 		Material = Enum.Material.Neon,
-		Transparency = 1,
+		Transparency = initHighlightTransparency,
 	})
 
 	return e("ViewportFrame", {
 		ref = viewportRef,
-		Size = UDim2.new(1, 0, 0, 60),
+		Size = props.Size or UDim2.fromScale(1, 1),
 		BackgroundColor3 = Colors.GREY,
 		BackgroundTransparency = 0,
 		BorderSizePixel = 0,
