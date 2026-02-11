@@ -13,6 +13,7 @@ local OperationButton = require("./PluginGui/OperationButton")
 local ChipForToggle = require("./PluginGui/ChipForToggle")
 local Checkbox = require("./PluginGui/Checkbox")
 local Settings = require("./Settings")
+local ModeDemo = require("./ModeDemo")
 local PluginGuiTypes = require("./PluginGui/Types")
 local FaceHighlight = require("./FaceHighlight")
 local doExtend = require("./doExtend")
@@ -47,7 +48,6 @@ local THRESHOLD_INFO = {
 local function ResizeMethodPanel(props: {
 	Settings: Settings.ResizeAlignSettings,
 	UpdatedSettings: () -> (),
-	FaceState: "FaceA" | "FaceB",
 	LayoutOrder: number?,
 })
 	local current = props.Settings.ResizeMode
@@ -169,33 +169,9 @@ local function ResizeMethodPanel(props: {
 					"<b>•Extend Into</b> — First face extended to fully penetrate the second.",
 			}),
 		}),
-		Status = props.Settings.HaveHelp and e("TextLabel", {
-			Size = UDim2.fromScale(1, 0),
-			AutomaticSize = Enum.AutomaticSize.Y,
-			BackgroundTransparency = 0,
-			BackgroundColor3 = Colors.GREY,
-			BorderSizePixel = 0,
-			Font = Enum.Font.SourceSans,
-			TextSize = 18,
-			TextColor3 = Colors.WHITE,
-			RichText = true,
-			Text = if props.FaceState == "FaceA"
-				then "<i>Select the first face to resize.</i>"
-				else "<i>Select the second face, or click empty space to cancel.</i>",
-			TextWrapped = true,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextYAlignment = Enum.TextYAlignment.Top,
+		Demo = e(ModeDemo, {
+			ResizeMode = props.Settings.ResizeMode,
 			LayoutOrder = 1,
-		}, {
-			Padding = e("UIPadding", {
-				PaddingTop = UDim.new(0, 2),
-				PaddingBottom = UDim.new(0, 2),
-				PaddingLeft = UDim.new(0, 4),
-				PaddingRight = UDim.new(0, 4),
-			}),
-			Corner = e("UICorner", {
-				CornerRadius = UDim.new(0, 4),
-			}),
 		}),
 	})
 end
@@ -511,7 +487,6 @@ local function ModernContent(props: {
 	CurrentSettings: Settings.ResizeAlignSettings,
 	UpdatedSettings: () -> (),
 	HandleAction: (string) -> (),
-	FaceState: "FaceA" | "FaceB",
 })
 	local currentSettings = props.CurrentSettings
 	local nextOrder = createNextOrder()
@@ -519,7 +494,6 @@ local function ModernContent(props: {
 		ResizeMethodPanel = e(ResizeMethodPanel, {
 			Settings = currentSettings,
 			UpdatedSettings = props.UpdatedSettings,
-			FaceState = props.FaceState,
 			LayoutOrder = nextOrder(),
 		}),
 		SelectionBehaviorPanel = e(SelectionBehaviorPanel, {
@@ -580,7 +554,6 @@ local function ResizeAlignGui(props: {
 				CurrentSettings = currentSettings,
 				UpdatedSettings = props.UpdatedSettings,
 				HandleAction = props.HandleAction,
-				FaceState = props.FaceState,
 			}),
 	})
 end
