@@ -55,7 +55,7 @@ async def run_tests(filter_str: str):
     # Step 2: Build the test runner plugin (triggers Studio auto-reload)
     build(
         "Building test runner",
-        ["rojo", "build", "runtests.project.json", "-o",
+        ["rojo", "build", "runtests.project.json", "-p",
          "RunTests.rbxmx"],
     )
 

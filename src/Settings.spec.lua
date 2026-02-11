@@ -43,7 +43,7 @@ return function(t: TestContext)
 	end)
 
 	t.test("All resize modes round-trip", function()
-		local modes = {"OuterTouch", "InnerTouch", "RoundedJoin", "ButtJoint", "ExtendUpTo", "ExtendInto"}
+		local modes = {"OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ButtJoint", "ExtendUpTo", "ExtendInto"}
 		for _, mode in modes do
 			local settings = Settings.Load(t.plugin)
 			settings.ResizeMode = mode

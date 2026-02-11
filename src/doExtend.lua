@@ -15,7 +15,7 @@ export type Face = {
 	IsWedge: boolean?,
 }
 
-export type ResizeMode = "OuterTouch" | "InnerTouch" | "RoundedJoin" | "ButtJoint" | "ExtendUpTo" | "ExtendInto"
+export type ResizeMode = "OuterTouch" | "InnerTouch" | "WedgeJoin" | "RoundedJoin" | "ButtJoint" | "ExtendUpTo" | "ExtendInto"
 
 local function otherNormals(dir: Vector3)
 	if math.abs(dir.X) > 0 then
@@ -193,7 +193,56 @@ local function fillJoint(faceA: Face, faceB: Face, fillPoint: Vector3, fillAxis:
 	cyl.Parent = faceB.Object.Parent
 end
 
-local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode)
+local function fillAcuteGap(face: Face, dirSelf: Vector3, dirOther: Vector3, crossAxis: Vector3, extraLen: number)
+	if extraLen < 0.001 then
+		return
+	end
+
+	local faceDir = Vector3.fromNormalId(face.Normal)
+	local tangentA_local, tangentB_local = otherNormals(faceDir)
+	local cf = face.Object.CFrame
+	local tangentA_world = cf:VectorToWorldSpace(tangentA_local)
+	local tangentB_world = cf:VectorToWorldSpace(tangentB_local)
+
+	local crossTangent_local, perpTangent_local, perpTangent_world
+	if math.abs(tangentA_world:Dot(crossAxis)) > math.abs(tangentB_world:Dot(crossAxis)) then
+		crossTangent_local = tangentA_local
+		perpTangent_local = tangentB_local
+		perpTangent_world = tangentB_world
+	else
+		crossTangent_local = tangentB_local
+		perpTangent_local = tangentA_local
+		perpTangent_world = tangentA_world
+	end
+
+	-- The outer direction is toward the corner where the gap is largest
+	local outerSign = if perpTangent_world:Dot(dirOther) > 0 then 1 else -1
+	local outerDir = perpTangent_world * outerSign
+
+	local size = face.Object.Size
+	local crossHalf = math.abs(crossTangent_local:Dot(size)) / 2
+	local perpHalf = math.abs(perpTangent_local:Dot(size)) / 2
+
+	-- Face center point (post-resize, so already at the inner-touch position)
+	local facePoint = getBasis(face)
+
+	-- WedgePart orientation:
+	-- Y = dirSelf (extension direction), Z (+back) = outerDir (full height at outer edge)
+	-- Slope goes from zero height at inner edge to extraLen at outer edge
+	local wedge = Instance.new("WedgePart")
+	copyPartProps(face.Object, wedge)
+	wedge.Size = Vector3.new(2 * crossHalf, extraLen, 2 * perpHalf)
+	wedge.CFrame = CFrame.fromMatrix(
+		facePoint + dirSelf * extraLen / 2,
+		dirSelf:Cross(outerDir),
+		dirSelf
+	)
+	wedge.TopSurface = Enum.SurfaceType.Smooth
+	wedge.BottomSurface = Enum.SurfaceType.Smooth
+	wedge.Parent = face.Object.Parent
+end
+
+local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteWedgeJoin: boolean?)
 	local pointsA = getFacePoints(faceA)
 	local pointsB = getFacePoints(faceB)
 	local localDimensionA = getDimension(faceA)
@@ -206,7 +255,7 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode)
 	local isParallel = math.abs(denom) < 0.001
 
 	local extendPointA, extendPointB;
-	if resizeMode == "ExtendInto" or resizeMode == "OuterTouch" or resizeMode == "ButtJoint" or (isParallel and resizeMode == "RoundedJoin") then
+	if resizeMode == "ExtendInto" or resizeMode == "OuterTouch" or resizeMode == "WedgeJoin" or resizeMode == "ButtJoint" or (isParallel and resizeMode == "RoundedJoin") then
 		extendPointA = getPositivePointToFace(faceB, pointsA)
 		extendPointB = getPositivePointToFace(faceA, pointsB)
 	elseif resizeMode == "ExtendUpTo" or resizeMode == "InnerTouch" then
@@ -261,6 +310,20 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode)
 	local lenA = -(b*e - c*d) / denom
 	local lenB = -(a*e - b*d) / denom
 
+	-- For acute angles with OuterTouch, use InnerTouch + wedge fill for a sharp point
+	local acuteOuterTouch = resizeMode == "WedgeJoin"
+		or (resizeMode == "OuterTouch" and acuteWedgeJoin == true and dirA:Dot(dirB) > 0)
+	local outerLenA, outerLenB
+	if acuteOuterTouch then
+		outerLenA, outerLenB = lenA, lenB
+		local innerPointA = getNegativePointToFace(faceB, pointsA)
+		local innerPointB = getNegativePointToFace(faceA, pointsB)
+		local innerSep = innerPointB - innerPointA
+		local id, ie = dirA:Dot(innerSep), dirB:Dot(innerSep)
+		lenA = -(b*ie - c*id) / denom
+		lenB = -(a*ie - b*id) / denom
+	end
+
 	if resizeMode == "ExtendInto" or resizeMode == "ExtendUpTo" then
 		local denom2 = dirA:Dot(dirB)
 		if math.abs(denom2) > 0.0001 then
@@ -304,6 +367,16 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode)
 
 	resizePart(faceA, lenA)
 	resizePart(faceB, lenB)
+
+	if acuteOuterTouch then
+		local crossAxis = dirA:Cross(dirB).Unit
+		if not faceA.IsWedge then
+			fillAcuteGap(faceA, dirA, dirB, crossAxis, outerLenA - lenA)
+		end
+		if not faceB.IsWedge then
+			fillAcuteGap(faceB, dirB, dirA, crossAxis, outerLenB - lenB)
+		end
+	end
 
 	if resizeMode == "RoundedJoin" then
 		local fillAxis = dirA:Cross(dirB).Unit

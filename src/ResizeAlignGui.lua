@@ -33,6 +33,7 @@ end
 local RESIZE_MODE_INFO = {
 	{ key = "OuterTouch", label = "Outer Touch", detail = "The parts are extended until the last point where the selected faces line up. (Good for sealing up non-right angle joints in walls and other things.)", icon = "rbxassetid://9756984675" },
 	{ key = "InnerTouch", label = "Inner Touch", detail = "The parts are extended until the first point where the selected faces line up.", icon = "rbxassetid://9756984928" },
+	{ key = "WedgeJoin", label = "Wedge Join", detail = "The parts are extended to inner touch and the remaining gap is filled with wedge parts to form a sharp point. (Good for acute angle joints.)", icon = "rbxassetid://9756984675" },
 	{ key = "RoundedJoin", label = "Rounded Join", detail = "The parts meet at the middle and any exposed gap is filled with a sphere or cylinder part. (Works best on faces which are the same size)", icon = "rbxassetid://9834555074" },
 	{ key = "ButtJoint", label = "Butt Joint", detail = "The parts are extended out such that the first face butts up against the side of the second face, with no overlap. (Only works for right-angle intersections)", icon = "rbxassetid://9756985700" },
 	{ key = "ExtendUpTo", label = "Extend Up To", detail = "The first face is extended out until the first point where it touches the second face. (The first face will be just touching the second face)", icon = "rbxassetid://9756985017" },
@@ -53,10 +54,11 @@ local function ResizeMethodPanel(props: {
 	local current = props.Settings.ResizeMode
 
 	local function makeButton(text: string, mode: Settings.ResizeMode, helpText: string, layoutOrder: number)
+		local HEIGHT = 28
 		return e(HelpGui.WithHelpIcon, {
 			LayoutOrder = layoutOrder,
 			Subject = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 30),
+				Size = UDim2.new(1, 0, 0, HEIGHT),
 				BackgroundTransparency = 1,
 			}, {
 				Layout = e("UIListLayout", {
@@ -67,7 +69,7 @@ local function ResizeMethodPanel(props: {
 				Button = e(ChipForToggle, {
 					Text = text,
 					IsCurrent = current == mode,
-					Height = 30,
+					Height = HEIGHT,
 					TextSize = 24,
 					LayoutOrder = 1,
 					OnClick = function()
@@ -78,7 +80,7 @@ local function ResizeMethodPanel(props: {
 				Demo = e(ModeDemo, {
 					ResizeMode = mode,
 					Animate = current == mode,
-					Size = UDim2.fromOffset(60, 30),
+					Size = UDim2.fromOffset(60, HEIGHT),
 					LayoutOrder = 2,
 				}),
 			}),
@@ -96,15 +98,32 @@ local function ResizeMethodPanel(props: {
 		OuterTouch = makeButton("Outer Touch", "OuterTouch",
 			"Extend both parts until their faces align at the outermost points. Good for sealing up non-right-angle joints.", 1),
 		InnerTouch = makeButton("Inner Touch", "InnerTouch",
-			"Extend both parts until their faces align at the innermost points.", 2),
+			"Extend both parts until their faces align at the innermost points.", 3),
+		WedgeJoin = makeButton("Wedge Join", "WedgeJoin",
+			"Extend to inner touch and fill the remaining gap with wedge parts to form a sharp point. Good for acute angle joints.", 4),
 		RoundedJoin = makeButton("Rounded Join", "RoundedJoin",
-			"Both parts meet at the middle and any exposed gap is filled with a sphere or cylinder. Works best on faces which are the same size.", 3),
+			"Both parts meet at the middle and any exposed gap is filled with a sphere or cylinder. Works best on faces which are the same size.", 5),
 		ButtJoint = makeButton("Butt Joint", "ButtJoint",
-			"The first face butts up against the side of the second, with no overlap. Only works for right-angle intersections.", 4),
+			"The first face butts up against the side of the second, with no overlap. Only works for right-angle intersections.", 6),
 		ExtendUpTo = makeButton("Extend Up To", "ExtendUpTo",
-			"Only the first face is extended out until it just touches the second face.", 5),
+			"Only the first face is extended out until it just touches the second face.", 7),
 		ExtendInto = makeButton("Extend Into", "ExtendInto",
-			"Only the first face is extended out until it fully penetrates the second face.", 6),
+			"Only the first face is extended out until it fully penetrates the second face.", 8),
+		AcuteWedgeJoin = current == "OuterTouch" and e(HelpGui.WithHelpIcon, {
+			LayoutOrder = 9,
+			Subject = e(Checkbox, {
+				Label = "Wedge Join tight corners",
+				Checked = props.Settings.AcuteWedgeJoin,
+				LayoutOrder = 9,
+				Changed = function(newValue: boolean)
+					props.Settings.AcuteWedgeJoin = newValue
+					props.UpdatedSettings()
+				end,
+			}),
+			Help = e(HelpGui.BasicTooltip, {
+				HelpRichText = "Automatically use Wedge Join instead of Outer Touch when the angle between faces is small to allow the formation of a sharp point for tight corners.",
+			}),
+		})
 	})
 end
 
@@ -273,6 +292,7 @@ end
 local RESIZE_MODE_ICONS: { [Settings.ResizeMode]: string } = {
 	OuterTouch = "rbxassetid://9756984675",
 	InnerTouch = "rbxassetid://9756984928",
+	WedgeJoin = "rbxassetid://9756984675",
 	RoundedJoin = "rbxassetid://9834555074",
 	ButtJoint = "rbxassetid://9756985700",
 	ExtendUpTo = "rbxassetid://9756985017",
@@ -304,11 +324,21 @@ local function ClassicResizeMethodPanel(props: {
 		Padding = UDim.new(0, 4),
 	}, {
 		OuterTouch = makeButton("OuterTouch", "Outer Touch", "extend to outermost alignment", 1),
-		InnerTouch = makeButton("InnerTouch", "Inner Touch", "extend to innermost alignment", 2),
-		RoundedJoin = makeButton("RoundedJoin", "Rounded Join", "meet in the middle with filler", 3),
-		ButtJoint = makeButton("ButtJoint", "Butt Joint", "butt up against second face", 4),
-		ExtendUpTo = makeButton("ExtendUpTo", "Extend Up To", "extend to first contact", 5),
-		ExtendInto = makeButton("ExtendInto", "Extend Into", "extend to full penetration", 6),
+		AcuteWedgeJoin = current == "OuterTouch" and e(Checkbox, {
+			Label = "Wedge fill acute angles",
+			Checked = props.Settings.AcuteWedgeJoin,
+			LayoutOrder = 2,
+			Changed = function(newValue: boolean)
+				props.Settings.AcuteWedgeJoin = newValue
+				props.UpdatedSettings()
+			end,
+		}),
+		InnerTouch = makeButton("InnerTouch", "Inner Touch", "extend to innermost alignment", 3),
+		WedgeJoin = makeButton("WedgeJoin", "Wedge Join", "inner touch + wedge fill for sharp point", 4),
+		RoundedJoin = makeButton("RoundedJoin", "Rounded Join", "meet in the middle with filler", 5),
+		ButtJoint = makeButton("ButtJoint", "Butt Joint", "butt up against second face", 6),
+		ExtendUpTo = makeButton("ExtendUpTo", "Extend Up To", "extend to first contact", 7),
+		ExtendInto = makeButton("ExtendInto", "Extend Into", "extend to full penetration", 8),
 	})
 end
 

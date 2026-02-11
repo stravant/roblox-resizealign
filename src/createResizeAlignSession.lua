@@ -289,7 +289,7 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 			mState = "FaceA"
 			mHoverFace = nil
 			if savedFaceA and face.Object ~= savedFaceA.Object then
-				doExtend(savedFaceA, face, activeSettings.ResizeMode)
+				doExtend(savedFaceA, face, activeSettings.ResizeMode, activeSettings.AcuteWedgeJoin)
 			end
 			changeSignal:Fire()
 		end

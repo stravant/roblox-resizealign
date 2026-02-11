@@ -114,7 +114,7 @@ local function computeDemoDeltas(
 	local extendPointA: Vector3
 	local extendPointB: Vector3
 
-	if mode == "OuterTouch" or mode == "ButtJoint" or mode == "ExtendInto" then
+	if mode == "OuterTouch" or mode == "WedgeJoin" or mode == "ButtJoint" or mode == "ExtendInto" then
 		extendPointA = maxPointToPlane(basisB, dirB, pointsA)
 		extendPointB = maxPointToPlane(basisA, dirA, pointsB)
 	elseif mode == "InnerTouch" or mode == "ExtendUpTo" then
@@ -167,8 +167,78 @@ local function computeDemoDeltas(
 		lenA += -(maxV - minV)
 	end
 
-	-- RoundedJoin: compute filler cylinder
+	-- WedgeJoin: recompute with inner extend points, build wedge fillers
 	local fillerData = nil
+	local innerExtendPointA: Vector3? = nil
+	if mode == "WedgeJoin" then
+		local outerLenA, outerLenB = lenA, lenB
+		local innerPointA = minPointToPlane(basisB, dirB, pointsA)
+		innerExtendPointA = innerPointA
+		local innerPointB = minPointToPlane(basisA, dirA, pointsB)
+		local innerSep = innerPointB - innerPointA
+		local id_val = dirA:Dot(innerSep)
+		local ie_val = dirB:Dot(innerSep)
+		lenA = -(b * ie_val - c * id_val) / denom
+		lenB = -(a * ie_val - b * id_val) / denom
+
+		local crossAxis = dirA:Cross(dirB)
+		if crossAxis.Magnitude > 0.001 then
+			crossAxis = crossAxis.Unit
+		end
+
+		local function computeWedge(fSpec: FaceSpec, dirSelf: Vector3, dirOther: Vector3, innerLen: number, extraLen: number)
+			local axisF = Vector3.fromNormalId(fSpec.face)
+			local sizeAxisF = Vector3.new(math.abs(axisF.X), math.abs(axisF.Y), math.abs(axisF.Z))
+			local newCF = fSpec.cf * CFrame.new(axisF * (innerLen / 2))
+			local newSize = fSpec.size + sizeAxisF * innerLen
+			local facePoint = getFaceBasis(newCF, newSize, fSpec.face)
+
+			local faceDir = Vector3.fromNormalId(fSpec.face)
+			local tangentA_local, tangentB_local = otherNormals(faceDir)
+			local tangentA_world = newCF:VectorToWorldSpace(tangentA_local)
+			local tangentB_world = newCF:VectorToWorldSpace(tangentB_local)
+
+			local crossTangent_local, perpTangent_local, perpTangent_world
+			if math.abs(tangentA_world:Dot(crossAxis)) > math.abs(tangentB_world:Dot(crossAxis)) then
+				crossTangent_local = tangentA_local
+				perpTangent_local = tangentB_local
+				perpTangent_world = tangentB_world
+			else
+				crossTangent_local = tangentB_local
+				perpTangent_local = tangentA_local
+				perpTangent_world = tangentA_world
+			end
+
+			local outerSign = if perpTangent_world:Dot(dirOther) > 0 then 1 else -1
+			local outerDir = perpTangent_world * outerSign
+			local crossHalf = math.abs(crossTangent_local:Dot(newSize)) / 2
+			local perpHalf = math.abs(perpTangent_local:Dot(newSize)) / 2
+
+			return {
+				CFrame = CFrame.fromMatrix(
+					facePoint + dirSelf * extraLen / 2,
+					dirSelf:Cross(outerDir),
+					dirSelf
+				),
+				Size = Vector3.new(2 * crossHalf, extraLen, 2 * perpHalf),
+			}
+		end
+
+		local extraA = outerLenA - lenA
+		local extraB = outerLenB - lenB
+		local wedges = {}
+		if extraA > 0.001 then
+			table.insert(wedges, computeWedge(fA, dirA, dirB, lenA, extraA))
+		end
+		if extraB > 0.001 then
+			table.insert(wedges, computeWedge(fB, dirB, dirA, lenB, extraB))
+		end
+		if #wedges > 0 then
+			fillerData = { wedges = wedges }
+		end
+	end
+
+	-- RoundedJoin: compute filler cylinder
 	if mode == "RoundedJoin" then
 		local fillAxis = dirA:Cross(dirB).Unit
 		local fillPoint = extendPointA + dirA * lenA
@@ -200,6 +270,8 @@ local function computeDemoDeltas(
 	local highlightPoint: Vector3
 	if mode == "RoundedJoin" and fillerData then
 		highlightPoint = fillerData.CFrame.Position
+	elseif mode == "WedgeJoin" and innerExtendPointA then
+		highlightPoint = innerExtendPointA + dirA * lenA
 	else
 		highlightPoint = extendPointA + dirA * lenA
 	end
@@ -259,6 +331,7 @@ end
 local DEMO_DATA: { [ResizeMode]: any } = {
 	OuterTouch = buildDemo(ANG_A, ANG_B, ANG_CAM, "OuterTouch"),
 	InnerTouch = buildDemo(ANG_A, ANG_B, ANG_CAM, "InnerTouch"),
+	WedgeJoin = buildDemo(ANG_A, ANG_B, ANG_CAM, "WedgeJoin"),
 	RoundedJoin = buildDemo(ANG_A, ANG_B, ANG_CAM, "RoundedJoin"),
 	ButtJoint = buildDemo(RT_A, RT_B, RT_CAM, "ButtJoint"),
 	ExtendUpTo = buildDemo(ANG_A, ANG_B, ANG_CAM, "ExtendUpTo"),
@@ -284,6 +357,7 @@ local function ModeDemo(props: {
 	local partARef = React.useRef(nil :: any)
 	local partBRef = React.useRef(nil :: any)
 	local fillerRef = React.useRef(nil :: any)
+	local filler2Ref = React.useRef(nil :: any)
 	local highlightRef = React.useRef(nil :: any)
 
 	-- Link camera to viewport after each render
@@ -303,6 +377,7 @@ local function ModeDemo(props: {
 		local partA = partARef.current
 		local partB = partBRef.current
 		local filler = fillerRef.current
+		local filler2 = filler2Ref.current
 		local highlight = highlightRef.current
 		if partA then
 			partA.CFrame = data.partAEnd.CFrame
@@ -314,6 +389,9 @@ local function ModeDemo(props: {
 		end
 		if filler and data.filler then
 			filler.Transparency = 0
+		end
+		if filler2 and data.filler then
+			filler2.Transparency = 0
 		end
 		if highlight then
 			highlight.Transparency = 0
@@ -331,6 +409,7 @@ local function ModeDemo(props: {
 				local partA = partARef.current
 				local partB = partBRef.current
 				local filler = fillerRef.current
+				local filler2 = filler2Ref.current
 				local highlight = highlightRef.current
 				if not (partA and partB) then
 					task.wait(0.1)
@@ -344,6 +423,9 @@ local function ModeDemo(props: {
 				partB.Size = data.partBStart.Size
 				if filler then
 					filler.Transparency = 1
+				end
+				if filler2 then
+					filler2.Transparency = 1
 				end
 				if highlight then
 					highlight.Transparency = 1
@@ -362,6 +444,9 @@ local function ModeDemo(props: {
 					partB.Size = data.partBStart.Size:Lerp(data.partBEnd.Size, t)
 					if filler and data.filler then
 						filler.Transparency = 1 - t
+					end
+					if filler2 and data.filler then
+						filler2.Transparency = 1 - t
 					end
 					task.wait(ANIM_TIME / STEPS)
 				end
@@ -412,18 +497,49 @@ local function ModeDemo(props: {
 	}
 
 	if data.filler then
-		worldChildren.Filler = e("Part", {
-			ref = fillerRef,
-			Anchored = true,
-			Shape = Enum.PartType.Cylinder,
-			CFrame = data.filler.CFrame,
-			Size = data.filler.Size,
-			Color = FILLER_COLOR,
-			Material = Enum.Material.SmoothPlastic,
-			Transparency = initFillerTransparency,
-			TopSurface = Enum.SurfaceType.Smooth,
-			BottomSurface = Enum.SurfaceType.Smooth,
-		})
+		if data.filler.wedges then
+			-- WedgeJoin: render wedge parts
+			if data.filler.wedges[1] then
+				worldChildren.Filler = e("WedgePart", {
+					ref = fillerRef,
+					Anchored = true,
+					CFrame = data.filler.wedges[1].CFrame,
+					Size = data.filler.wedges[1].Size,
+					Color = FILLER_COLOR,
+					Material = Enum.Material.SmoothPlastic,
+					Transparency = initFillerTransparency,
+					TopSurface = Enum.SurfaceType.Smooth,
+					BottomSurface = Enum.SurfaceType.Smooth,
+				})
+			end
+			if data.filler.wedges[2] then
+				worldChildren.Filler2 = e("WedgePart", {
+					ref = filler2Ref,
+					Anchored = true,
+					CFrame = data.filler.wedges[2].CFrame,
+					Size = data.filler.wedges[2].Size,
+					Color = FILLER_COLOR,
+					Material = Enum.Material.SmoothPlastic,
+					Transparency = initFillerTransparency,
+					TopSurface = Enum.SurfaceType.Smooth,
+					BottomSurface = Enum.SurfaceType.Smooth,
+				})
+			end
+		else
+			-- RoundedJoin: render cylinder
+			worldChildren.Filler = e("Part", {
+				ref = fillerRef,
+				Anchored = true,
+				Shape = Enum.PartType.Cylinder,
+				CFrame = data.filler.CFrame,
+				Size = data.filler.Size,
+				Color = FILLER_COLOR,
+				Material = Enum.Material.SmoothPlastic,
+				Transparency = initFillerTransparency,
+				TopSurface = Enum.SurfaceType.Smooth,
+				BottomSurface = Enum.SurfaceType.Smooth,
+			})
+		end
 	end
 
 	worldChildren.Highlight = e("Part", {

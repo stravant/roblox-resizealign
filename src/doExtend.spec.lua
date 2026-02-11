@@ -30,9 +30,9 @@ local function cleanup(...: BasePart)
 	for _, part in {...} do
 		part:Destroy()
 	end
-	-- Also clean up any children that doExtend may have created (e.g. RoundedJoin filler)
+	-- Also clean up any children that doExtend may have created (e.g. RoundedJoin filler, acute wedge fills)
 	for _, child in workspace:GetChildren() do
-		if child.Name:find("_Extended") or (child:IsA("Part") and child.Shape == Enum.PartType.Cylinder) then
+		if child.Name:find("_Extended") or (child:IsA("Part") and child.Shape == Enum.PartType.Cylinder) or child:IsA("WedgePart") then
 			child:Destroy()
 		end
 	end
@@ -127,6 +127,273 @@ return function(t: TestContext)
 
 		t.expect(partA.Size.X > origSizeA).toBe(true)
 		t.expect(partB.Size.X > origSizeB).toBe(true)
+		cleanup(partA, partB)
+	end)
+
+	t.test("WedgeJoin: acute angle creates two wedge fills", function()
+		-- Part A face Right (+X), Part B face Bottom rotated 45° → dirB = (0.707, -0.707, 0)
+		-- dirA·dirB = 0.707 > 0 (acute outward point)
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
+		local partB = makePart(
+			CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			Vector3.new(2, 4, 4)
+		)
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Bottom)
+
+		local origSizeAx = partA.Size.X
+
+		doExtend(faceA, faceB, "WedgeJoin")
+
+		-- Part A should have been resized (inner touch)
+		t.expect(partA.Size.X > origSizeAx).toBe(true)
+
+		-- Collect wedge parts
+		local wedges = {}
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") then
+				table.insert(wedges, child)
+			end
+		end
+
+		-- Should create 2 wedge fills (one per face)
+		t.expect(#wedges).toBe(2)
+
+		-- All wedges should have non-degenerate sizes
+		for _, wedge in wedges do
+			t.expect(wedge.Size.X > 0.001).toBe(true)
+			t.expect(wedge.Size.Y > 0.001).toBe(true)
+			t.expect(wedge.Size.Z > 0.001).toBe(true)
+		end
+
+		cleanup(partA, partB)
+	end)
+
+	t.test("WedgeJoin: acute wedge geometry is correct for face A", function()
+		-- Same acute setup, verify wedge A's specific geometry
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
+		local partB = makePart(
+			CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			Vector3.new(2, 4, 4)
+		)
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Bottom)
+
+		local dirA = Vector3.new(1, 0, 0)
+
+		doExtend(faceA, faceB, "WedgeJoin")
+
+		-- After resize, face A's right face position
+		local faceARight = partA.Position.X + partA.Size.X / 2
+
+		-- Collect wedge parts
+		local wedges = {}
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") then
+				table.insert(wedges, child)
+			end
+		end
+
+		-- Find the wedge that belongs to face A (its Up vector should be ~dirA = +X)
+		local wedgeA = nil
+		for _, wedge in wedges do
+			if math.abs(wedge.CFrame.UpVector:Dot(dirA)) > 0.9 then
+				wedgeA = wedge
+				break
+			end
+		end
+
+		t.expect(wedgeA ~= nil).toBe(true)
+		if wedgeA then
+			-- Wedge X should match face A's cross-axis dimension (Z = 4)
+			t.expect(approxEqual(wedgeA.Size.X, 4)).toBe(true)
+			-- Wedge Z should match face A's perp-axis dimension (Y = 4)
+			t.expect(approxEqual(wedgeA.Size.Z, 4)).toBe(true)
+			-- Wedge Y (extraLen) should be positive and reasonable
+			t.expect(wedgeA.Size.Y > 0.01).toBe(true)
+			t.expect(wedgeA.Size.Y < 20).toBe(true)
+
+			-- Wedge should be positioned adjacent to face A's right face
+			-- Its center should be at faceARight + extraLen/2 along X
+			local expectedCenterX = faceARight + wedgeA.Size.Y / 2
+			t.expect(approxEqual(wedgeA.Position.X, expectedCenterX)).toBe(true)
+		end
+
+		cleanup(partA, partB)
+	end)
+
+	t.test("WedgeJoin: acute wedges meet at outer-touch intersection", function()
+		-- The parts should be resized to inner-touch, with wedges filling to outer-touch
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
+		local partB = makePart(
+			CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			Vector3.new(2, 4, 4)
+		)
+
+		-- Do an InnerTouch on identical geometry to get the expected inner size
+		local partA_inner = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
+		local partB_inner = makePart(
+			CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			Vector3.new(2, 4, 4)
+		)
+		doExtend(
+			makeFace(partA_inner, Enum.NormalId.Right),
+			makeFace(partB_inner, Enum.NormalId.Bottom),
+			"InnerTouch"
+		)
+		local innerSizeAx = partA_inner.Size.X
+
+		-- Now do the actual WedgeJoin
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Bottom)
+		doExtend(faceA, faceB, "WedgeJoin")
+
+		-- Part A should be resized to inner-touch size (not outer)
+		t.expect(approxEqual(partA.Size.X, innerSizeAx)).toBe(true)
+
+		-- Collect wedges
+		local wedges = {}
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") then
+				table.insert(wedges, child)
+			end
+		end
+		t.expect(#wedges).toBe(2)
+
+		cleanup(partA, partB, partA_inner, partB_inner)
+	end)
+
+	t.test("WedgeJoin: parallel faces produce no wedges", function()
+		-- Parallel faces hit the isParallel early return, no wedges should be created
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
+		local partB = makePart(CFrame.new(3, 0, 0), Vector3.new(2, 2, 2))
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Left)
+
+		doExtend(faceA, faceB, "WedgeJoin")
+
+		-- Part A should still have been resized (parallel path resizes faceA)
+		t.expect(partA.Size.X > 2).toBe(true)
+
+		-- No wedges should be created
+		local wedgeCount = 0
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") then
+				wedgeCount += 1
+			end
+		end
+		t.expect(wedgeCount).toBe(0)
+
+		cleanup(partA, partB)
+	end)
+
+	t.test("WedgeJoin: right-angle faces produce no huge wedges", function()
+		-- 90 degree angle: dirA·dirB = 0, wedges should exist but be reasonable
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
+		local partB = makePart(CFrame.new(2, 3, 0), Vector3.new(2, 2, 2))
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Bottom)
+
+		doExtend(faceA, faceB, "WedgeJoin")
+
+		-- Any wedges created should have reasonable sizes (not infinite)
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") then
+				t.expect(child.Size.X < 100).toBe(true)
+				t.expect(child.Size.Y < 100).toBe(true)
+				t.expect(child.Size.Z < 100).toBe(true)
+			end
+		end
+
+		cleanup(partA, partB)
+	end)
+
+	t.test("OuterTouch: acuteWedgeJoin=true creates wedges on acute angle", function()
+		-- Acute angle (dirA·dirB > 0) with flag on should create wedges
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
+		local partB = makePart(
+			CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			Vector3.new(2, 4, 4)
+		)
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Bottom)
+
+		doExtend(faceA, faceB, "OuterTouch", true)
+
+		local wedgeCount = 0
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") then
+				wedgeCount += 1
+			end
+		end
+		t.expect(wedgeCount).toBe(2)
+
+		cleanup(partA, partB)
+	end)
+
+	t.test("OuterTouch: acuteWedgeJoin=false creates no wedges on acute angle", function()
+		-- Acute angle with flag off should NOT create wedges
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
+		local partB = makePart(
+			CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			Vector3.new(2, 4, 4)
+		)
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Bottom)
+
+		doExtend(faceA, faceB, "OuterTouch", false)
+
+		local wedgeCount = 0
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") then
+				wedgeCount += 1
+			end
+		end
+		t.expect(wedgeCount).toBe(0)
+
+		cleanup(partA, partB)
+	end)
+
+	t.test("OuterTouch: acuteWedgeJoin=true creates no wedges on obtuse angle", function()
+		-- Obtuse angle (dirA·dirB < 0) should NOT trigger wedge fill even with flag on
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
+		local partB = makePart(
+			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			Vector3.new(2, 2, 2)
+		)
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Left)
+
+		doExtend(faceA, faceB, "OuterTouch", true)
+
+		local wedgeCount = 0
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") then
+				wedgeCount += 1
+			end
+		end
+		t.expect(wedgeCount).toBe(0)
+
+		cleanup(partA, partB)
+	end)
+
+	t.test("OuterTouch: acuteWedgeJoin=true with parallel faces creates no wedges", function()
+		-- Parallel faces should never create wedges regardless of setting
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
+		local partB = makePart(CFrame.new(3, 0, 0), Vector3.new(2, 2, 2))
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Left)
+
+		doExtend(faceA, faceB, "OuterTouch", true)
+
+		local wedgeCount = 0
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") then
+				wedgeCount += 1
+			end
+		end
+		t.expect(wedgeCount).toBe(0)
+
 		cleanup(partA, partB)
 	end)
 
@@ -344,7 +611,7 @@ return function(t: TestContext)
 	end)
 
 	t.test("All modes run without error on axis-aligned parts", function()
-		local modes: {doExtend.ResizeMode} = {"OuterTouch", "InnerTouch", "RoundedJoin", "ButtJoint", "ExtendUpTo", "ExtendInto"}
+		local modes: {doExtend.ResizeMode} = {"OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ButtJoint", "ExtendUpTo", "ExtendInto"}
 		for _, mode in modes do
 			local partA = makePart(CFrame.new(-5, 0, 0), Vector3.new(4, 4, 4))
 			local partB = makePart(CFrame.new(5, 0, 0), Vector3.new(4, 4, 4))
@@ -356,7 +623,7 @@ return function(t: TestContext)
 	end)
 
 	t.test("All modes run without error on angled parts", function()
-		local modes: {doExtend.ResizeMode} = {"OuterTouch", "InnerTouch", "RoundedJoin", "ExtendUpTo", "ExtendInto"}
+		local modes: {doExtend.ResizeMode} = {"OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ExtendUpTo", "ExtendInto"}
 		for _, mode in modes do
 			local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
 			local partB = makePart(
