@@ -107,4 +107,96 @@ return function(t: TestContext)
 		session.Destroy()
 		t.expect(true).toBe(true)
 	end)
+
+	t.test("GetHoverFace returns nil initially", function()
+		local session = createResizeAlignSession(t.plugin, makeTestSettings())
+		t.expect(session.GetHoverFace() == nil).toBe(true)
+		session.Destroy()
+	end)
+
+	t.test("Selecting two faces on different parts completes and resets to FaceA", function()
+		local session = createResizeAlignSession(t.plugin, makeTestSettings())
+
+		local partA = Instance.new("Part")
+		partA.Size = Vector3.new(4, 4, 4)
+		partA.CFrame = CFrame.new(-5, 0, 0)
+		partA.Parent = workspace
+
+		local partB = Instance.new("Part")
+		partB.Size = Vector3.new(4, 4, 4)
+		partB.CFrame = CFrame.new(5, 0, 0)
+		partB.Parent = workspace
+
+		session.TestSelectFace(makeFace(partA, Enum.NormalId.Right))
+		t.expect(session.GetFaceState()).toBe("FaceB")
+
+		session.TestSelectFace(makeFace(partB, Enum.NormalId.Left))
+		-- After second face, should reset to FaceA (operation complete)
+		t.expect(session.GetFaceState()).toBe("FaceA")
+		t.expect(session.GetSelectedFace() == nil).toBe(true)
+
+		session.Destroy()
+		partA:Destroy()
+		partB:Destroy()
+	end)
+
+	t.test("Selecting same part for both faces resets without extending", function()
+		local session = createResizeAlignSession(t.plugin, makeTestSettings())
+
+		local part = Instance.new("Part")
+		part.Size = Vector3.new(4, 4, 4)
+		part.CFrame = CFrame.new(0, 0, 0)
+		part.Parent = workspace
+
+		local origSize = part.Size
+
+		session.TestSelectFace(makeFace(part, Enum.NormalId.Right))
+		session.TestSelectFace(makeFace(part, Enum.NormalId.Left))
+
+		-- Should not have resized (same object check in selectFace)
+		t.expect(part.Size).toBe(origSize)
+		t.expect(session.GetFaceState()).toBe("FaceA")
+
+		session.Destroy()
+		part:Destroy()
+	end)
+
+	t.test("Multiple reset calls don't error", function()
+		local session = createResizeAlignSession(t.plugin, makeTestSettings())
+
+		session.TestResetFace()
+		session.TestResetFace()
+		t.expect(session.GetFaceState()).toBe("FaceA")
+
+		session.Destroy()
+	end)
+
+	t.test("ChangeSignal fires twice for full select cycle", function()
+		local session = createResizeAlignSession(t.plugin, makeTestSettings())
+
+		local fireCount = 0
+		session.ChangeSignal:Connect(function()
+			fireCount += 1
+		end)
+
+		local partA = Instance.new("Part")
+		partA.Size = Vector3.new(4, 4, 4)
+		partA.CFrame = CFrame.new(-5, 0, 0)
+		partA.Parent = workspace
+
+		local partB = Instance.new("Part")
+		partB.Size = Vector3.new(4, 4, 4)
+		partB.CFrame = CFrame.new(5, 0, 0)
+		partB.Parent = workspace
+
+		session.TestSelectFace(makeFace(partA, Enum.NormalId.Right))
+		t.expect(fireCount).toBe(1)
+
+		session.TestSelectFace(makeFace(partB, Enum.NormalId.Left))
+		t.expect(fireCount).toBe(2)
+
+		session.Destroy()
+		partA:Destroy()
+		partB:Destroy()
+	end)
 end

@@ -11,6 +11,7 @@ local function ChipWithOutline(props: {
 	Text: string,
 	LayoutOrder: number?,
 	Height: number?,
+	TextSize: number?,
 	TextColor3: Color3,
 	Bolded: boolean,
 	BorderColor3: Color3,
@@ -47,7 +48,7 @@ local function ChipWithOutline(props: {
 		ZIndex = props.ZIndex,
 		Text = props.Text,
 		Font = if props.Bolded then Enum.Font.SourceSansBold else Enum.Font.SourceSans,
-		TextSize = if props.Bolded then 20 else 18,
+		TextSize = props.TextSize or (if props.Bolded then 20 else 18),
 		AutoButtonColor = not props.Bolded,
 		LayoutOrder = props.LayoutOrder,
 		[React.Event.MouseButton1Click] = props.OnClick,
@@ -58,6 +59,7 @@ local function ChipForToggle(props: {
 	Text: string,
 	LayoutOrder: number?,
 	Height: number?,
+	TextSize: number?,
 	IsCurrent: boolean,
 	OnClick: () -> (),
 })
@@ -71,6 +73,7 @@ local function ChipForToggle(props: {
 		BackgroundColor3 = Colors.ACTION_BLUE,
 		LayoutOrder = props.LayoutOrder,
 		Height = props.Height,
+		TextSize = props.TextSize,
 		ZIndex = if isCurrent then 2 else 1,
 		OnClick = props.OnClick,
 	}, {

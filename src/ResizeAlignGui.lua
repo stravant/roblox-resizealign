@@ -56,7 +56,7 @@ local function ResizeMethodPanel(props: {
 		return e(HelpGui.WithHelpIcon, {
 			LayoutOrder = layoutOrder,
 			Subject = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 36),
+				Size = UDim2.new(1, 0, 0, 30),
 				BackgroundTransparency = 1,
 			}, {
 				Layout = e("UIListLayout", {
@@ -67,7 +67,8 @@ local function ResizeMethodPanel(props: {
 				Button = e(ChipForToggle, {
 					Text = text,
 					IsCurrent = current == mode,
-					Height = 36,
+					Height = 30,
+					TextSize = 24,
 					LayoutOrder = 1,
 					OnClick = function()
 						props.Settings.ResizeMode = mode
@@ -77,7 +78,7 @@ local function ResizeMethodPanel(props: {
 				Demo = e(ModeDemo, {
 					ResizeMode = mode,
 					Animate = current == mode,
-					Size = UDim2.fromOffset(72, 36),
+					Size = UDim2.fromOffset(60, 30),
 					LayoutOrder = 2,
 				}),
 			}),

@@ -129,6 +129,9 @@ end
 
 local function resizePart(face: Face, delta: number)
 	if face.IsWedge then
+		if math.abs(delta) < 0.001 then
+			return
+		end
 		local point, normal = getBasis(face)
 		local part = Instance.new("Part")
 		copyPartProps(face.Object, part)

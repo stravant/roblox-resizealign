@@ -224,7 +224,7 @@ local ANG_B: FaceSpec = {
 	size = Vector3.new(3, 1.0, 0.8),
 	face = Enum.NormalId.Left,
 }
-local ANG_CAM = CFrame.lookAt(Vector3.new(0.5, 0.4, 5), Vector3.new(0.5, 0.4, 0))
+local ANG_CAM = CFrame.lookAt(Vector3.new(0.3, 0.0, 4), Vector3.new(0.3, 0.0, 0))
 
 -- Right-angle scene: Part A horizontal, Part B vertical with bottom face selected
 local RT_A: FaceSpec = {
@@ -237,7 +237,7 @@ local RT_B: FaceSpec = {
 	size = Vector3.new(1.5, 2, 0.8),
 	face = Enum.NormalId.Bottom,
 }
-local RT_CAM = CFrame.lookAt(Vector3.new(0.9, 0, 4), Vector3.new(0.9, 0, 0))
+local RT_CAM = CFrame.lookAt(Vector3.new(0.7, -0.3, 3.2), Vector3.new(0.7, -0.3, 0))
 
 --------------------------------------------------------------------------------
 -- Build demo data for each mode
