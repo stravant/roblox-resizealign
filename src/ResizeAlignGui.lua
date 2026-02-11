@@ -100,7 +100,7 @@ local function ResizeMethodPanel(props: {
 		InnerTouch = makeButton("Inner Touch", "InnerTouch",
 			"Extend both parts until their faces align at the innermost points.", 3),
 		WedgeJoin = makeButton("Wedge Join", "WedgeJoin",
-			"Extend to inner touch and fill the remaining gap with wedge parts to form a sharp point. Good for acute angle joints.", 4),
+			"Extend to inner touch and fill the remaining gap with wedge parts to form a sharp point. This mode always avoids Z-fighting.", 4),
 		RoundedJoin = makeButton("Rounded Join", "RoundedJoin",
 			"Both parts meet at the middle and any exposed gap is filled with a sphere or cylinder. Works best on faces which are the same size.", 5),
 		ButtJoint = makeButton("Butt Joint", "ButtJoint",
@@ -324,21 +324,11 @@ local function ClassicResizeMethodPanel(props: {
 		Padding = UDim.new(0, 4),
 	}, {
 		OuterTouch = makeButton("OuterTouch", "Outer Touch", "extend to outermost alignment", 1),
-		AcuteWedgeJoin = current == "OuterTouch" and e(Checkbox, {
-			Label = "Wedge fill acute angles",
-			Checked = props.Settings.AcuteWedgeJoin,
-			LayoutOrder = 2,
-			Changed = function(newValue: boolean)
-				props.Settings.AcuteWedgeJoin = newValue
-				props.UpdatedSettings()
-			end,
-		}),
-		InnerTouch = makeButton("InnerTouch", "Inner Touch", "extend to innermost alignment", 3),
-		WedgeJoin = makeButton("WedgeJoin", "Wedge Join", "inner touch + wedge fill for sharp point", 4),
-		RoundedJoin = makeButton("RoundedJoin", "Rounded Join", "meet in the middle with filler", 5),
-		ButtJoint = makeButton("ButtJoint", "Butt Joint", "butt up against second face", 6),
-		ExtendUpTo = makeButton("ExtendUpTo", "Extend Up To", "extend to first contact", 7),
-		ExtendInto = makeButton("ExtendInto", "Extend Into", "extend to full penetration", 8),
+		InnerTouch = makeButton("InnerTouch", "Inner Touch", "extend to innermost alignment", 2),
+		RoundedJoin = makeButton("RoundedJoin", "Rounded Join", "meet in the middle with filler", 3),
+		ButtJoint = makeButton("ButtJoint", "Butt Joint", "butt up against second face", 4),
+		ExtendUpTo = makeButton("ExtendUpTo", "Extend Up To", "extend to first contact", 5),
+		ExtendInto = makeButton("ExtendInto", "Extend Into", "extend to full penetration", 6),
 	})
 end
 
