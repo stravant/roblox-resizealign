@@ -14,6 +14,7 @@ local ShapeUtils = require(Src.ShapeUtils)
 local otherNormals = ShapeUtils.otherNormals
 local isWedgeShape = ShapeUtils.isWedgeShape
 local isCornerWedgeShape = ShapeUtils.isCornerWedgeShape
+local isCylinder = ShapeUtils.isCylinder
 
 export type Face = {
 	Object: BasePart,
@@ -23,10 +24,6 @@ export type Face = {
 }
 
 export type ResizeMode = Settings.ResizeMode
-
-local function isCylinder(part: BasePart)
-	return part:IsA("Part") and part.Shape == Enum.PartType.Cylinder
-end
 
 local function getFacePoints(face: Face)
 	local hsize = face.Object.Size / 2

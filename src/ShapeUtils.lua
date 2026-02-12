@@ -18,8 +18,13 @@ local function isCornerWedgeShape(part: BasePart): boolean
 	return part:IsA("CornerWedgePart") or (part:IsA("Part") and part.Shape == Enum.PartType.CornerWedge)
 end
 
+local function isCylinder(part: BasePart): boolean
+	return part:IsA("Part") and part.Shape == Enum.PartType.Cylinder
+end
+
 return {
 	otherNormals = otherNormals,
 	isWedgeShape = isWedgeShape,
 	isCornerWedgeShape = isCornerWedgeShape,
+	isCylinder = isCylinder,
 }
