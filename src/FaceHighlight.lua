@@ -1,3 +1,4 @@
+--!strict
 local Src = script.Parent
 local Packages = Src.Parent.Packages
 
@@ -19,6 +20,46 @@ local function otherNormals(dir: Vector3)
 	else
 		return Vector3.new(1, 0, 0), Vector3.new(0, 1, 0)
 	end
+end
+
+-- B should be vertex at the right angle
+local function RightAngleTriangleHandleAdornment(props: {
+	A: Vector3,
+	B: Vector3,
+	C: Vector3,
+	Transparency: number,
+	ZIndexOffset: number?,
+	Color: Color3,
+})
+	local ab = (props.B - props.A)
+	local bc = (props.C - props.B)
+	local normal = ab:Cross(bc).Unit
+	local mid = (props.A + props.C) * 0.5
+	local abmid = (props.A + 0.5 * ab)
+	local bcmid = (props.B + 0.5 * bc)
+
+	return e(React.Fragment, nil, {
+		A = e("ConeHandleAdornment", {
+			Adornee = workspace.Terrain,
+			Height = (mid - abmid).Magnitude,
+			Radius = ab.Magnitude / 2,
+			CFrame = CFrame.fromMatrix(abmid, ab.Unit, Vector3.zero, ab.Unit:Cross(normal).Unit),
+			ZIndex = 1 + (props.ZIndexOffset or 0),
+			AlwaysOnTop = true,
+			Transparency = props.Transparency,
+			Color3 = props.Color,
+		}),
+		B = e("ConeHandleAdornment", {
+			Adornee = workspace.Terrain,
+			Height = (mid - bcmid).Magnitude,
+			Radius = bc.Magnitude / 2,
+			CFrame = CFrame.fromMatrix(bcmid, ab.Unit:Cross(normal).Unit, Vector3.zero, ab.Unit),
+			ZIndex = 1 + (props.ZIndexOffset or 0),
+			AlwaysOnTop = true,
+			Transparency = props.Transparency,
+			Color3 = props.Color,
+		}),
+	})
 end
 
 local function WedgeFaceHighlight(props: {
@@ -137,26 +178,20 @@ local function CornerWedgeFaceHighlight(props: {
 	local v1 = cf:PointToWorldSpace(v1sro * hsize)
 	local v2 = cf:PointToWorldSpace(v2sro * hsize)
 	local v3 = cf:PointToWorldSpace(v3sro * hsize)
-	local centroid = (v1 + v2 + v3) / 3
 
 	-- Edge lengths
 	local len12 = (v2 - v1).Magnitude
 	local len13 = (v3 - v1).Magnitude
 	local len23 = (v3 - v2).Magnitude
 
-	-- Box orientation in world space
-	local boxRight = (v2 - v1).Unit
-	local boxNormal = (v2 - v1):Cross(v3 - v1).Unit
-
 	return e(React.Fragment, nil, {
-		Handle = e("BoxHandleAdornment", {
-			Adornee = workspace.Terrain,
-			Size = Vector3.new(len12, 0.1, len13),
-			CFrame = CFrame.fromMatrix(centroid, boxRight, boxNormal),
-			ZIndex = 1 + zmod,
-			AlwaysOnTop = true,
+		Handle = e(RightAngleTriangleHandleAdornment, {
+			A = v2,
+			B = v1,
+			C = v3,
+			ZIndexOffset = props.ZIndexOffset,
 			Transparency = props.Transparency,
-			Color3 = props.Color,
+			Color = props.Color,
 		}),
 		Edge1 = e("CylinderHandleAdornment", {
 			Color3 = props.Color,
@@ -295,24 +330,19 @@ local function CornerWedgeFlatFaceHighlight(props: {
 	local v1 = cf:PointToWorldSpace(v1sro * hsize)
 	local v2 = cf:PointToWorldSpace(v2sro * hsize)
 	local v3 = cf:PointToWorldSpace(v3sro * hsize)
-	local centroid = (v1 + v2 + v3) / 3
 
 	local len12 = (v2 - v1).Magnitude
 	local len13 = (v3 - v1).Magnitude
 	local len23 = (v3 - v2).Magnitude
 
-	local boxRight = (v2 - v1).Unit
-	local boxNormal = (v2 - v1):Cross(v3 - v1).Unit
-
 	return e(React.Fragment, nil, {
-		Handle = e("BoxHandleAdornment", {
-			Adornee = workspace.Terrain,
-			Size = Vector3.new(len12, 0.1, len13),
-			CFrame = CFrame.fromMatrix(centroid, boxRight, boxNormal),
-			ZIndex = 1 + zmod,
-			AlwaysOnTop = true,
+		Handle = e(RightAngleTriangleHandleAdornment, {
+			A = v2,
+			B = v1,
+			C = v3,
+			ZIndexOffset = props.ZIndexOffset,
 			Transparency = props.Transparency,
-			Color3 = props.Color,
+			Color = props.Color,
 		}),
 		Edge1 = e("CylinderHandleAdornment", {
 			Color3 = props.Color,
