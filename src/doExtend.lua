@@ -62,11 +62,12 @@ local function getFacePoints(face: Face)
 			cf:PointToWorldSpace(Vector3.new(hsize.X, hsize.Y, -hsize.Z)),
 		}
 	elseif face.IsWedge then
+		-- Slope face corners: top-back edge to bottom-front edge
 		return {
-			cf:PointToWorldSpace((Vector3.xAxis + Vector3.yAxis + Vector3.zAxis) * hsize),
-			cf:PointToWorldSpace((Vector3.xAxis + Vector3.yAxis + Vector3.zAxis) * hsize),
-			cf:PointToWorldSpace((-Vector3.xAxis - Vector3.yAxis - Vector3.zAxis) * hsize),
-			cf:PointToWorldSpace((-Vector3.xAxis - Vector3.yAxis - Vector3.zAxis) * hsize),
+			cf:PointToWorldSpace(Vector3.new( hsize.X,  hsize.Y,  hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(-hsize.X,  hsize.Y,  hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new( hsize.X, -hsize.Y, -hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(-hsize.X, -hsize.Y, -hsize.Z)),
 		}
 	else
 		local faceDir = Vector3.fromNormalId(face.Normal)
