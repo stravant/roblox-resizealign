@@ -7,6 +7,10 @@ local e = React.createElement
 local doExtend = require(Src.doExtend)
 type Face = doExtend.Face
 
+local function isCornerWedgeShape(part: BasePart)
+	return part:IsA("CornerWedgePart") or (part:IsA("Part") and part.Shape == Enum.PartType.CornerWedge)
+end
+
 local function otherNormals(dir: Vector3)
 	if math.abs(dir.X) > 0 then
 		return Vector3.new(0, 1, 0), Vector3.new(0, 0, 1)
@@ -85,6 +89,108 @@ local function WedgeFaceHighlight(props: {
 	})
 end
 
+-- CFrame whose ZVector = dir (the axis CylinderHandleAdornment extends along)
+local function cylinderCFrame(dir: Vector3)
+	local d = dir.Unit
+	local perp
+	if math.abs(d:Dot(Vector3.zAxis)) < 0.9 then
+		perp = d:Cross(Vector3.zAxis).Unit
+	else
+		perp = d:Cross(Vector3.xAxis).Unit
+	end
+	return CFrame.fromMatrix(Vector3.zero, perp, d:Cross(perp).Unit)
+end
+
+local function CornerWedgeFaceHighlight(props: {
+	Face: Face,
+	Color: Color3,
+	Transparency: number,
+	ZIndexOffset: number?,
+})
+	local face = props.Face
+	local hsize = face.Object.Size / 2
+	local cf = face.Object.CFrame
+	local zmod = props.ZIndexOffset or 0
+
+	-- Peak at E=(hx,hy,-hz). Triangle vertices (SizeRelativeOffset) and edge directions (local space).
+	local v1sro, v2sro, v3sro
+	local edge12dir, edge13dir, edge23dir
+	if face.CornerWedgeSide == "Right" then
+		-- Right slope ACE: A=(-hx,-hy,-hz), C=(-hx,-hy,hz), E=(hx,hy,-hz)
+		v1sro = Vector3.new(-1, -1, -1)  -- A (right angle)
+		v2sro = Vector3.new(-1, -1, 1)   -- C
+		v3sro = Vector3.new(1, 1, -1)    -- E
+		edge12dir = Vector3.zAxis                              -- A→C
+		edge13dir = Vector3.new(hsize.X, hsize.Y, 0)          -- A→E
+		edge23dir = Vector3.new(hsize.X, hsize.Y, -hsize.Z)   -- C→E
+	else
+		-- Back slope CDE: C=(-hx,-hy,hz), D=(hx,-hy,hz), E=(hx,hy,-hz)
+		v1sro = Vector3.new(1, -1, 1)    -- D (right angle)
+		v2sro = Vector3.new(1, 1, -1)    -- E
+		v3sro = Vector3.new(-1, -1, 1)   -- C
+		edge12dir = Vector3.new(0, hsize.Y, -hsize.Z)         -- D→E
+		edge13dir = -Vector3.xAxis                             -- D→C
+		edge23dir = Vector3.new(-hsize.X, -hsize.Y, hsize.Z)  -- E→C
+	end
+
+	-- Compute world-space centroid for box highlight
+	local v1 = cf:PointToWorldSpace(v1sro * hsize)
+	local v2 = cf:PointToWorldSpace(v2sro * hsize)
+	local v3 = cf:PointToWorldSpace(v3sro * hsize)
+	local centroid = (v1 + v2 + v3) / 3
+
+	-- Edge lengths
+	local len12 = (v2 - v1).Magnitude
+	local len13 = (v3 - v1).Magnitude
+	local len23 = (v3 - v2).Magnitude
+
+	-- Box orientation in world space
+	local boxRight = (v2 - v1).Unit
+	local boxNormal = (v2 - v1):Cross(v3 - v1).Unit
+
+	return e(React.Fragment, nil, {
+		Handle = e("BoxHandleAdornment", {
+			Adornee = workspace.Terrain,
+			Size = Vector3.new(len12, 0.1, len13),
+			CFrame = CFrame.fromMatrix(centroid, boxRight, boxNormal),
+			ZIndex = 1 + zmod,
+			AlwaysOnTop = true,
+			Transparency = props.Transparency,
+			Color3 = props.Color,
+		}),
+		Edge1 = e("CylinderHandleAdornment", {
+			Color3 = props.Color,
+			ZIndex = 2 + zmod,
+			Adornee = face.Object,
+			Height = len12 + 0.4,
+			AlwaysOnTop = false,
+			Radius = 0.05,
+			CFrame = cylinderCFrame(edge12dir),
+			SizeRelativeOffset = (v1sro + v2sro) / 2,
+		}),
+		Edge2 = e("CylinderHandleAdornment", {
+			Color3 = props.Color,
+			ZIndex = 2 + zmod,
+			Adornee = face.Object,
+			Height = len13 + 0.4,
+			AlwaysOnTop = false,
+			Radius = 0.05,
+			CFrame = cylinderCFrame(edge13dir),
+			SizeRelativeOffset = (v1sro + v3sro) / 2,
+		}),
+		Edge3 = e("CylinderHandleAdornment", {
+			Color3 = props.Color,
+			ZIndex = 2 + zmod,
+			Adornee = face.Object,
+			Height = len23 + 0.4,
+			AlwaysOnTop = false,
+			Radius = 0.05,
+			CFrame = cylinderCFrame(edge23dir),
+			SizeRelativeOffset = (v2sro + v3sro) / 2,
+		}),
+	})
+end
+
 local function SquareFaceHighlight(props: {
 	Face: Face,
 	Color: Color3,
@@ -153,14 +259,106 @@ local function SquareFaceHighlight(props: {
 	})
 end
 
+local function CornerWedgeFlatFaceHighlight(props: {
+	Face: Face,
+	Color: Color3,
+	Transparency: number,
+	ZIndexOffset: number?,
+})
+	local face = props.Face
+	local hsize = face.Object.Size / 2
+	local cf = face.Object.CFrame
+	local zmod = props.ZIndexOffset or 0
+
+	local v1sro, v2sro, v3sro
+	local edge12dir, edge13dir, edge23dir
+	if face.Normal == Enum.NormalId.Front then
+		-- Front face ABE: A=(-hx,-hy,-hz), B=(hx,-hy,-hz), E=(hx,hy,-hz)
+		-- Right angle at B
+		v1sro = Vector3.new(1, -1, -1)   -- B (right angle)
+		v2sro = Vector3.new(-1, -1, -1)  -- A
+		v3sro = Vector3.new(1, 1, -1)    -- E
+		edge12dir = -Vector3.xAxis                          -- B→A
+		edge13dir = Vector3.yAxis                           -- B→E
+		edge23dir = Vector3.new(hsize.X, hsize.Y, 0)       -- A→E
+	else -- Right
+		-- Right face BDE: B=(hx,-hy,-hz), D=(hx,-hy,hz), E=(hx,hy,-hz)
+		-- Right angle at B
+		v1sro = Vector3.new(1, -1, -1)   -- B (right angle)
+		v2sro = Vector3.new(1, -1, 1)    -- D
+		v3sro = Vector3.new(1, 1, -1)    -- E
+		edge12dir = Vector3.zAxis                           -- B→D
+		edge13dir = Vector3.yAxis                           -- B→E
+		edge23dir = Vector3.new(0, hsize.Y, -hsize.Z)      -- D→E
+	end
+
+	local v1 = cf:PointToWorldSpace(v1sro * hsize)
+	local v2 = cf:PointToWorldSpace(v2sro * hsize)
+	local v3 = cf:PointToWorldSpace(v3sro * hsize)
+	local centroid = (v1 + v2 + v3) / 3
+
+	local len12 = (v2 - v1).Magnitude
+	local len13 = (v3 - v1).Magnitude
+	local len23 = (v3 - v2).Magnitude
+
+	local boxRight = (v2 - v1).Unit
+	local boxNormal = (v2 - v1):Cross(v3 - v1).Unit
+
+	return e(React.Fragment, nil, {
+		Handle = e("BoxHandleAdornment", {
+			Adornee = workspace.Terrain,
+			Size = Vector3.new(len12, 0.1, len13),
+			CFrame = CFrame.fromMatrix(centroid, boxRight, boxNormal),
+			ZIndex = 1 + zmod,
+			AlwaysOnTop = true,
+			Transparency = props.Transparency,
+			Color3 = props.Color,
+		}),
+		Edge1 = e("CylinderHandleAdornment", {
+			Color3 = props.Color,
+			ZIndex = 2 + zmod,
+			Adornee = face.Object,
+			Height = len12 + 0.4,
+			AlwaysOnTop = false,
+			Radius = 0.05,
+			CFrame = cylinderCFrame(edge12dir),
+			SizeRelativeOffset = (v1sro + v2sro) / 2,
+		}),
+		Edge2 = e("CylinderHandleAdornment", {
+			Color3 = props.Color,
+			ZIndex = 2 + zmod,
+			Adornee = face.Object,
+			Height = len13 + 0.4,
+			AlwaysOnTop = false,
+			Radius = 0.05,
+			CFrame = cylinderCFrame(edge13dir),
+			SizeRelativeOffset = (v1sro + v3sro) / 2,
+		}),
+		Edge3 = e("CylinderHandleAdornment", {
+			Color3 = props.Color,
+			ZIndex = 2 + zmod,
+			Adornee = face.Object,
+			Height = len23 + 0.4,
+			AlwaysOnTop = false,
+			Radius = 0.05,
+			CFrame = cylinderCFrame(edge23dir),
+			SizeRelativeOffset = (v2sro + v3sro) / 2,
+		}),
+	})
+end
+
 local function FaceHighlight(props: {
 	Face: Face,
 	Color: Color3,
 	Transparency: number,
 	ZIndexOffset: number?,
 })
-	if props.Face.IsWedge then
+	if props.Face.CornerWedgeSide then
+		return e(CornerWedgeFaceHighlight, props)
+	elseif props.Face.IsWedge then
 		return e(WedgeFaceHighlight, props)
+	elseif isCornerWedgeShape(props.Face.Object) and (props.Face.Normal == Enum.NormalId.Front or props.Face.Normal == Enum.NormalId.Right) then
+		return e(CornerWedgeFlatFaceHighlight, props)
 	else
 		return e(SquareFaceHighlight, props)
 	end

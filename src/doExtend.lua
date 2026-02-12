@@ -13,6 +13,7 @@ export type Face = {
 	Object: BasePart,
 	Normal: Enum.NormalId,
 	IsWedge: boolean?,
+	CornerWedgeSide: ("Right" | "Back")?,
 }
 
 export type ResizeMode = "OuterTouch" | "InnerTouch" | "WedgeJoin" | "RoundedJoin" | "ButtJoint" | "ExtendUpTo" | "ExtendInto"
@@ -27,10 +28,52 @@ local function otherNormals(dir: Vector3)
 	end
 end
 
+local function isCylinder(part: BasePart)
+	return part:IsA("Part") and part.Shape == Enum.PartType.Cylinder
+end
+
+local function isWedgeShape(part: BasePart)
+	return part:IsA("WedgePart") or (part:IsA("Part") and part.Shape == Enum.PartType.Wedge)
+end
+
+local function isCornerWedgeShape(part: BasePart)
+	return part:IsA("CornerWedgePart") or (part:IsA("Part") and part.Shape == Enum.PartType.CornerWedge)
+end
+
 local function getFacePoints(face: Face)
 	local hsize = face.Object.Size / 2
 	local cf = face.Object.CFrame
-	if face.IsWedge then
+	if face.CornerWedgeSide == "Right" then
+		-- Peak at E=(hx,hy,-hz). Right slope triangle ACE:
+		-- A=(-hx,-hy,-hz), C=(-hx,-hy,hz), E=(hx,hy,-hz)
+		return {
+			cf:PointToWorldSpace(Vector3.new(-hsize.X, -hsize.Y, -hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(-hsize.X, -hsize.Y, hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(hsize.X, hsize.Y, -hsize.Z)),
+		}
+	elseif face.CornerWedgeSide == "Back" then
+		-- Peak at E=(hx,hy,-hz). Back slope triangle CDE:
+		-- C=(-hx,-hy,hz), D=(hx,-hy,hz), E=(hx,hy,-hz)
+		return {
+			cf:PointToWorldSpace(Vector3.new(-hsize.X, -hsize.Y, hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(hsize.X, -hsize.Y, hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(hsize.X, hsize.Y, -hsize.Z)),
+		}
+	elseif isCornerWedgeShape(face.Object) and face.Normal == Enum.NormalId.Front then
+		-- Front face triangle ABE: A=(-hx,-hy,-hz), B=(hx,-hy,-hz), E=(hx,hy,-hz)
+		return {
+			cf:PointToWorldSpace(Vector3.new(-hsize.X, -hsize.Y, -hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(hsize.X, -hsize.Y, -hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(hsize.X, hsize.Y, -hsize.Z)),
+		}
+	elseif isCornerWedgeShape(face.Object) and face.Normal == Enum.NormalId.Right then
+		-- Right face triangle BDE: B=(hx,-hy,-hz), D=(hx,-hy,hz), E=(hx,hy,-hz)
+		return {
+			cf:PointToWorldSpace(Vector3.new(hsize.X, -hsize.Y, -hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(hsize.X, -hsize.Y, hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(hsize.X, hsize.Y, -hsize.Z)),
+		}
+	elseif face.IsWedge then
 		return {
 			cf:PointToWorldSpace((Vector3.xAxis + Vector3.yAxis + Vector3.zAxis) * hsize),
 			cf:PointToWorldSpace((Vector3.xAxis + Vector3.yAxis + Vector3.zAxis) * hsize),
@@ -65,7 +108,17 @@ local function getPoints(part: BasePart): {Vector3}
 end
 
 local function getNormal(face: Face)
-	if face.IsWedge then
+	if face.CornerWedgeSide then
+		local hsize = face.Object.Size / 2
+		local cf = face.Object.CFrame
+		if face.CornerWedgeSide == "Right" then
+			-- Outward normal direction in local space: (-hy, hx, 0)
+			return (cf.YVector * hsize.X - cf.XVector * hsize.Y).Unit
+		else
+			-- Outward normal direction in local space: (0, hz, hy)
+			return (cf.YVector * hsize.Z + cf.ZVector * hsize.Y).Unit
+		end
+	elseif face.IsWedge then
 		local hsize = face.Object.Size / 2
 		local cf = face.Object.CFrame
 		return (cf.YVector * hsize.Z - cf.ZVector * hsize.Y).Unit
@@ -74,17 +127,30 @@ local function getNormal(face: Face)
 	end
 end
 
-local function getDimension(face: Face)
-	if face.IsWedge then
-		return Vector3.zero
-	else
-		local dir = Vector3.fromNormalId(face.Normal)
-		return Vector3.new(math.abs(dir.X), math.abs(dir.Y), math.abs(dir.Z))
+-- Returns true if the face can't be resized normally and must be extruded
+local function isExtrusionFace(face: Face): boolean
+	if face.IsWedge or face.CornerWedgeSide then
+		return true
 	end
+	if isCornerWedgeShape(face.Object) then
+		return true
+	end
+	if isWedgeShape(face.Object) and face.Normal ~= Enum.NormalId.Left and face.Normal ~= Enum.NormalId.Right then
+		return true
+	end
+	return false
+end
+
+local function getDimension(face: Face)
+	if isExtrusionFace(face) then
+		return Vector3.zero
+	end
+	local dir = Vector3.fromNormalId(face.Normal)
+	return Vector3.new(math.abs(dir.X), math.abs(dir.Y), math.abs(dir.Z))
 end
 
 local function getBasis(face: Face)
-	if face.IsWedge then
+	if face.IsWedge or face.CornerWedgeSide then
 		return face.Object.Position, getNormal(face)
 	else
 		local hsize = face.Object.Size / 2
@@ -123,12 +189,53 @@ local function getNegativePointToFace(face: Face, points: {Vector3}): Vector3
 	return minPoint
 end
 
-local function isCylinder(part: BasePart)
-	return part:IsA("Part") and part.Shape == Enum.PartType.Cylinder
-end
-
 local function resizePart(face: Face, delta: number)
-	if face.IsWedge then
+	if face.CornerWedgeSide then
+		if math.abs(delta) < 0.001 then
+			return
+		end
+		local normal = getNormal(face)
+		local cf = face.Object.CFrame
+		local size = face.Object.Size
+		local hsize = size / 2
+
+		-- Peak at E=(hx,hy,-hz). The WedgePart right angle is at local (-SY/2, +SZ/2),
+		-- so +Y maps to one leg and -Z maps to the other. The leg assignments must
+		-- satisfy: normal:Cross(legUpDir) = -legAlongDir (the ZVector equation).
+		local legUpDir, legUpLen, legAlongLen
+		if face.CornerWedgeSide == "Right" then
+			-- Right slope triangle ACE: A=(-hx,-hy,-hz), C=(-hx,-hy,hz), E=(hx,hy,-hz)
+			-- Right angle at A. Y-axis = A→E, -Z axis = A→C.
+			local A = cf:PointToWorldSpace(Vector3.new(-hsize.X, -hsize.Y, -hsize.Z))
+			local C = cf:PointToWorldSpace(Vector3.new(-hsize.X, -hsize.Y, hsize.Z))
+			local E = cf:PointToWorldSpace(Vector3.new(hsize.X, hsize.Y, -hsize.Z))
+			legUpDir = (E - A).Unit
+			legUpLen = (E - A).Magnitude
+			legAlongLen = (C - A).Magnitude
+		else
+			-- Back slope triangle CDE: C=(-hx,-hy,hz), D=(hx,-hy,hz), E=(hx,hy,-hz)
+			-- Right angle at D. Y-axis = D→C, -Z axis = D→E.
+			local C = cf:PointToWorldSpace(Vector3.new(-hsize.X, -hsize.Y, hsize.Z))
+			local D = cf:PointToWorldSpace(Vector3.new(hsize.X, -hsize.Y, hsize.Z))
+			local E = cf:PointToWorldSpace(Vector3.new(hsize.X, hsize.Y, -hsize.Z))
+			legUpDir = (C - D).Unit
+			legUpLen = (C - D).Magnitude
+			legAlongLen = (E - D).Magnitude
+		end
+
+		local wedge = Instance.new("WedgePart")
+		copyPartProps(face.Object, wedge)
+		wedge.Size = Vector3.new(delta, legUpLen, legAlongLen)
+		wedge.CFrame = CFrame.fromMatrix(
+			face.Object.Position + normal * (delta / 2),
+			normal,
+			legUpDir
+		)
+		wedge.TopSurface = Enum.SurfaceType.Smooth
+		wedge.BottomSurface = Enum.SurfaceType.Smooth
+		wedge.Parent = face.Object.Parent
+		wedge.Name = face.Object.Name .. "_Extended"
+	elseif face.IsWedge then
 		if math.abs(delta) < 0.001 then
 			return
 		end
@@ -142,6 +249,53 @@ local function resizePart(face: Face, delta: number)
 		part.BottomSurface = Enum.SurfaceType.Smooth
 		part.Parent = face.Object.Parent
 		part.Name = face.Object.Name.."_Extended"
+	elseif isCornerWedgeShape(face.Object) and (face.Normal == Enum.NormalId.Front or face.Normal == Enum.NormalId.Right) then
+		-- Triangle flat faces of CornerWedge: extrude WedgePart to preserve slopes
+		if math.abs(delta) < 0.001 then
+			return
+		end
+		local cf = face.Object.CFrame
+		local hsize = face.Object.Size / 2
+		local wedge = Instance.new("WedgePart")
+		copyPartProps(face.Object, wedge)
+		if face.Normal == Enum.NormalId.Front then
+			-- Front triangle ABE, right angle at B. Slope matches CornerWedge right slope.
+			wedge.Size = Vector3.new(delta, 2 * hsize.Y, 2 * hsize.X)
+			wedge.CFrame = CFrame.fromMatrix(
+				cf.Position - cf.ZVector * (hsize.Z + delta / 2),
+				-cf.ZVector,
+				cf.YVector
+			)
+		else
+			-- Right triangle BDE, right angle at B. Slope matches CornerWedge back slope.
+			wedge.Size = Vector3.new(delta, 2 * hsize.Y, 2 * hsize.Z)
+			wedge.CFrame = CFrame.fromMatrix(
+				cf.Position + cf.XVector * (hsize.X + delta / 2),
+				-cf.XVector,
+				cf.YVector
+			)
+		end
+		wedge.TopSurface = Enum.SurfaceType.Smooth
+		wedge.BottomSurface = Enum.SurfaceType.Smooth
+		wedge.Parent = face.Object.Parent
+		wedge.Name = face.Object.Name .. "_Extended"
+	elseif isExtrusionFace(face) then
+		-- Rectangle flat faces of CornerWedge/WedgePart: extrude box Part to preserve slopes
+		if math.abs(delta) < 0.001 then
+			return
+		end
+		local cf = face.Object.CFrame
+		local faceDir = Vector3.fromNormalId(face.Normal)
+		local sizeDir = Vector3.new(math.abs(faceDir.X), math.abs(faceDir.Y), math.abs(faceDir.Z))
+		local halfAlongNormal = sizeDir:Dot(face.Object.Size) / 2
+		local part = Instance.new("Part")
+		copyPartProps(face.Object, part)
+		part.Size = face.Object.Size * (Vector3.one - sizeDir) + sizeDir * delta
+		part.CFrame = cf * CFrame.new(faceDir * (halfAlongNormal + delta / 2))
+		part.TopSurface = Enum.SurfaceType.Smooth
+		part.BottomSurface = Enum.SurfaceType.Smooth
+		part.Parent = face.Object.Parent
+		part.Name = face.Object.Name .. "_Extended"
 	else
 		local joiner = JointMaker.new(false)
 		joiner:pickUpParts({face.Object})
@@ -285,7 +439,7 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 
 	if isParallel then
 		local lenA = (extendPointA - extendPointB):Dot(getNormal(faceB))
-		if faceA.IsWedge then
+		if isExtrusionFace(faceA) then
 			if lenA < 0 then
 				return
 			end
@@ -357,10 +511,18 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 	local extendableA = (localDimensionA * faceA.Object.Size).Magnitude
 	local extendableB = (localDimensionB * faceB.Object.Size).Magnitude
 	if lenA < -extendableA then
-		return
+		if isExtrusionFace(faceA) then
+			lenA = 0
+		else
+			return
+		end
 	end
 	if lenB < -extendableB then
-		return
+		if isExtrusionFace(faceB) then
+			lenB = 0
+		else
+			return
+		end
 	end
 
 	local recording = ChangeHistoryService:TryBeginRecording("ResizeAlign")
@@ -370,10 +532,10 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 
 	if acuteOuterTouch then
 		local crossAxis = dirA:Cross(dirB).Unit
-		if not faceA.IsWedge then
+		if not faceA.IsWedge and not faceA.CornerWedgeSide then
 			fillAcuteGap(faceA, dirA, dirB, crossAxis, outerLenA - lenA)
 		end
-		if not faceB.IsWedge then
+		if not faceB.IsWedge and not faceB.CornerWedgeSide then
 			fillAcuteGap(faceB, dirB, dirA, crossAxis, outerLenB - lenB)
 		end
 	end

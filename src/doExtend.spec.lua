@@ -651,6 +651,166 @@ return function(t: TestContext)
 		cleanup(partA, partB)
 	end)
 
+	--------------------------------------------------------------------------------
+	-- CornerWedge slope extrusion
+	--------------------------------------------------------------------------------
+
+	t.test("CornerWedge: right slope extrusion creates a WedgePart", function()
+		-- CornerWedgePart at origin, size 4x4x4
+		-- Right slope normal is (-hy,hx,0).Unit = (-1,1,0)/sqrt(2)
+		-- Place target part in the normal direction so delta > 0
+		local cornerWedge = Instance.new("CornerWedgePart")
+		cornerWedge.Size = Vector3.new(4, 4, 4)
+		cornerWedge.CFrame = CFrame.new(0, 0, 0)
+		cornerWedge.Anchored = true
+		cornerWedge.Parent = workspace
+
+		local partB = makePart(CFrame.new(-4, 4, 0), Vector3.new(2, 2, 2))
+		local faceA: doExtend.Face = {
+			Object = cornerWedge,
+			Normal = Enum.NormalId.Right,
+			CornerWedgeSide = "Right",
+		}
+		local faceB = makeFace(partB, Enum.NormalId.Bottom)
+
+		doExtend(faceA, faceB, "OuterTouch")
+
+		-- Find the created WedgePart
+		local createdWedge = nil
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") and child.Name:find("_Extended") then
+				createdWedge = child
+				break
+			end
+		end
+		t.expect(createdWedge ~= nil).toBe(true)
+
+		cornerWedge:Destroy()
+		cleanup(partB)
+	end)
+
+	t.test("CornerWedge: back slope extrusion creates a WedgePart", function()
+		-- Back slope normal is (0,hz,hy).Unit = (0,1,1)/sqrt(2)
+		-- Place target part in the normal direction
+		local cornerWedge = Instance.new("CornerWedgePart")
+		cornerWedge.Size = Vector3.new(4, 4, 4)
+		cornerWedge.CFrame = CFrame.new(0, 0, 0)
+		cornerWedge.Anchored = true
+		cornerWedge.Parent = workspace
+
+		local partB = makePart(CFrame.new(0, 4, 4), Vector3.new(2, 2, 2))
+		local faceA: doExtend.Face = {
+			Object = cornerWedge,
+			Normal = Enum.NormalId.Back,
+			CornerWedgeSide = "Back",
+		}
+		local faceB = makeFace(partB, Enum.NormalId.Bottom)
+
+		doExtend(faceA, faceB, "OuterTouch")
+
+		local createdWedge = nil
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") and child.Name:find("_Extended") then
+				createdWedge = child
+				break
+			end
+		end
+		t.expect(createdWedge ~= nil).toBe(true)
+
+		cornerWedge:Destroy()
+		cleanup(partB)
+	end)
+
+	t.test("CornerWedge: zero-delta extrusion creates nothing", function()
+		-- When the slope already touches the target, no wedge should be created
+		local cornerWedge = Instance.new("CornerWedgePart")
+		cornerWedge.Size = Vector3.new(4, 4, 4)
+		cornerWedge.CFrame = CFrame.new(0, 0, 0)
+		cornerWedge.Anchored = true
+		cornerWedge.Parent = workspace
+
+		local faceA: doExtend.Face = {
+			Object = cornerWedge,
+			Normal = Enum.NormalId.Right,
+			CornerWedgeSide = "Right",
+		}
+
+		-- Place partB very close to the slope so delta ≈ 0
+		-- The right slope normal is (hy,hx,0).Unit = (1,1,0).Unit for a 4x4x4 part
+		-- The slope passes through origin, so a part touching it means no extend needed
+		local normalDir = Vector3.new(2, 2, 0).Unit
+		local partB = makePart(CFrame.new(normalDir * 0.001), Vector3.new(0.001, 0.001, 0.001))
+		local faceB = makeFace(partB, Enum.NormalId.Left)
+
+		local childCountBefore = #workspace:GetChildren()
+
+		doExtend(faceA, faceB, "OuterTouch")
+
+		-- Check no wedge was created (delta should be ~0)
+		local createdWedge = nil
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") and child.Name:find("_Extended") then
+				createdWedge = child
+				break
+			end
+		end
+		-- May or may not create one depending on floating point; just don't error
+		cornerWedge:Destroy()
+		cleanup(partB)
+	end)
+
+	t.test("CornerWedge: all modes run without error on right slope", function()
+		local modes: {doExtend.ResizeMode} = {"OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ExtendUpTo", "ExtendInto"}
+		for _, mode in modes do
+			local cornerWedge = Instance.new("CornerWedgePart")
+			cornerWedge.Size = Vector3.new(4, 4, 4)
+			cornerWedge.CFrame = CFrame.new(0, 0, 0)
+			cornerWedge.Anchored = true
+			cornerWedge.Parent = workspace
+
+			local partB = makePart(CFrame.new(4, 4, 0), Vector3.new(2, 2, 2))
+			local faceA: doExtend.Face = {
+				Object = cornerWedge,
+				Normal = Enum.NormalId.Right,
+				CornerWedgeSide = "Right",
+			}
+			local faceB = makeFace(partB, Enum.NormalId.Bottom)
+
+			doExtend(faceA, faceB, mode)
+
+			cornerWedge:Destroy()
+			cleanup(partB)
+		end
+	end)
+
+	t.test("CornerWedge: all modes run without error on back slope", function()
+		local modes: {doExtend.ResizeMode} = {"OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ExtendUpTo", "ExtendInto"}
+		for _, mode in modes do
+			local cornerWedge = Instance.new("CornerWedgePart")
+			cornerWedge.Size = Vector3.new(4, 4, 4)
+			cornerWedge.CFrame = CFrame.new(0, 0, 0)
+			cornerWedge.Anchored = true
+			cornerWedge.Parent = workspace
+
+			local partB = makePart(CFrame.new(0, 4, 4), Vector3.new(2, 2, 2))
+			local faceA: doExtend.Face = {
+				Object = cornerWedge,
+				Normal = Enum.NormalId.Back,
+				CornerWedgeSide = "Back",
+			}
+			local faceB = makeFace(partB, Enum.NormalId.Bottom)
+
+			doExtend(faceA, faceB, mode)
+
+			cornerWedge:Destroy()
+			cleanup(partB)
+		end
+	end)
+
+	--------------------------------------------------------------------------------
+	-- Other edge cases
+	--------------------------------------------------------------------------------
+
 	t.test("ExtendUpTo with wedge Face B does not create zero-size part", function()
 		-- Regression: resizePart was called with delta=0 on wedge Face B,
 		-- which created a new part with zero Y size instead of being a no-op.

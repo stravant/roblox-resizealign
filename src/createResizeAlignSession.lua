@@ -204,22 +204,43 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 			smallest = math.abs(localDisp.Z + halfSize.Z)
 		end
 
-		local offsetFrac = localDisp / halfSize
 		local isWedgeFace = false
-		if halfSize.Z > 0 then
-			local wedgeFace = offsetFrac.Y / offsetFrac.Z
-			if math.abs(1 - wedgeFace) < 0.0001 then
-				isWedgeFace = true
+		local cornerWedgeSide = nil
+		local isWedgeShape = hit:IsA("WedgePart") or (hit:IsA("Part") and hit.Shape == Enum.PartType.Wedge)
+		local isCornerWedgeShape = hit:IsA("CornerWedgePart") or (hit:IsA("Part") and hit.Shape == Enum.PartType.CornerWedge)
+		local hitNormal = result.Normal
+		local cf = hit.CFrame
+		if isWedgeShape then
+			local slopeNormal = cf.YVector * halfSize.Z - cf.ZVector * halfSize.Y
+			if slopeNormal.Magnitude > 0.001 then
+				isWedgeFace = hitNormal:Dot(slopeNormal.Unit) > 0.99
+			end
+		elseif isCornerWedgeShape then
+			local rightNormal = cf.YVector * halfSize.X - cf.XVector * halfSize.Y
+			local backNormal = cf.YVector * halfSize.Z + cf.ZVector * halfSize.Y
+			if rightNormal.Magnitude > 0.001 and hitNormal:Dot(rightNormal.Unit) > 0.99 then
+				cornerWedgeSide = "Right"
+			elseif backNormal.Magnitude > 0.001 and hitNormal:Dot(backNormal.Unit) > 0.99 then
+				cornerWedgeSide = "Back"
 			end
 		end
 
-		return hit, at, targetSurface, isWedgeFace
+		return hit, at, targetSurface, isWedgeFace, cornerWedgeSide
 	end
 
 	local function getTarget(): Face?
-		local hit, _at, normalId, isWedgeFace = simpleGetTarget()
+		local hit, _at, normalId, isWedgeFace, cornerWedgeSide = simpleGetTarget()
 		if not hit then
 			return nil
+		end
+
+		-- If it's a corner wedge slope, return directly (no edge threshold logic)
+		if cornerWedgeSide then
+			return {
+				Object = hit,
+				Normal = normalId,
+				CornerWedgeSide = cornerWedgeSide,
+			}
 		end
 
 		local threshold;
