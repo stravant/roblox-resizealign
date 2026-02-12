@@ -20,4 +20,7 @@ return function(fromPart: BasePart, toPart: BasePart)
 	toPart.Reflectance  = fromPart.Reflectance
 	toPart.Transparency = fromPart.Transparency
 	toPart.MaterialVariant = fromPart.MaterialVariant
+	--
+	toPart.TopSurface    = Enum.SurfaceType.Smooth
+	toPart.BottomSurface = Enum.SurfaceType.Smooth
 end

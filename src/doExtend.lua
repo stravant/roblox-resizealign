@@ -220,8 +220,6 @@ local function resizePart(face: Face, delta: number)
 			normal,
 			legUpDir
 		)
-		wedge.TopSurface = Enum.SurfaceType.Smooth
-		wedge.BottomSurface = Enum.SurfaceType.Smooth
 		wedge.Parent = face.Object.Parent
 		wedge.Name = face.Object.Name .. "_Extended"
 	elseif face.IsWedge then
@@ -234,8 +232,6 @@ local function resizePart(face: Face, delta: number)
 		part.CFrame = CFrame.fromMatrix(point + normal * 0.5 * delta, face.Object.CFrame.XVector, normal)
 		local size = face.Object.Size
 		part.Size = Vector3.new(size.X, delta, math.sqrt(size.Y^2 + size.Z^2))
-		part.TopSurface = Enum.SurfaceType.Smooth
-		part.BottomSurface = Enum.SurfaceType.Smooth
 		part.Parent = face.Object.Parent
 		part.Name = face.Object.Name.."_Extended"
 	elseif isCornerWedgeShape(face.Object) and (face.Normal == Enum.NormalId.Front or face.Normal == Enum.NormalId.Right) then
@@ -264,8 +260,6 @@ local function resizePart(face: Face, delta: number)
 				cf.YVector
 			)
 		end
-		wedge.TopSurface = Enum.SurfaceType.Smooth
-		wedge.BottomSurface = Enum.SurfaceType.Smooth
 		wedge.Parent = face.Object.Parent
 		wedge.Name = face.Object.Name .. "_Extended"
 	elseif isExtrusionFace(face) then
@@ -281,8 +275,6 @@ local function resizePart(face: Face, delta: number)
 		copyPartProps(face.Object, part)
 		part.Size = face.Object.Size * (Vector3.one - sizeDir) + sizeDir * delta
 		part.CFrame = cf * CFrame.new(faceDir * (halfAlongNormal + delta / 2))
-		part.TopSurface = Enum.SurfaceType.Smooth
-		part.BottomSurface = Enum.SurfaceType.Smooth
 		part.Parent = face.Object.Parent
 		part.Name = face.Object.Name .. "_Extended"
 	else
@@ -328,8 +320,6 @@ local function fillJoint(faceA: Face, faceB: Face, fillPoint: Vector3, fillAxis:
 	else
 		cyl.Shape = Enum.PartType.Cylinder
 	end
-	cyl.TopSurface = Enum.SurfaceType.Smooth
-	cyl.BottomSurface = Enum.SurfaceType.Smooth
 	copyPartProps(faceB.Object, cyl)
 	cyl.Size = Vector3.new(length, 2 * radius, 2 * radius)
 	cyl.CFrame = CFrame.fromMatrix(centerPoint, fillAxis, getNormal(faceB))
@@ -380,8 +370,6 @@ local function fillAcuteGap(face: Face, dirSelf: Vector3, dirOther: Vector3, cro
 		dirSelf:Cross(outerDir),
 		dirSelf
 	)
-	wedge.TopSurface = Enum.SurfaceType.Smooth
-	wedge.BottomSurface = Enum.SurfaceType.Smooth
 	wedge.Parent = face.Object.Parent
 end
 
