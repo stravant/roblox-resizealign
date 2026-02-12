@@ -42,6 +42,19 @@ return function(t: TestContext)
 		Settings.Save(t.plugin, settings)
 	end)
 
+	t.test("AcuteWedgeJoin round-trips", function()
+		local settings = Settings.Load(t.plugin)
+		settings.AcuteWedgeJoin = false
+		Settings.Save(t.plugin, settings)
+
+		local reloaded = Settings.Load(t.plugin)
+		t.expect(reloaded.AcuteWedgeJoin).toBe(false)
+
+		-- Restore
+		settings.AcuteWedgeJoin = true
+		Settings.Save(t.plugin, settings)
+	end)
+
 	t.test("All resize modes round-trip", function()
 		local modes = {"OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ButtJoint", "ExtendUpTo", "ExtendInto"}
 		for _, mode in modes do
