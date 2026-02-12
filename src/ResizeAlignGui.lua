@@ -30,22 +30,6 @@ local function createNextOrder()
 	end
 end
 
-local RESIZE_MODE_INFO = {
-	{ key = "OuterTouch", label = "Outer Touch", detail = "The parts are extended until the last point where the selected faces line up. (Good for sealing up non-right angle joints in walls and other things.)", icon = "rbxassetid://9756984675" },
-	{ key = "InnerTouch", label = "Inner Touch", detail = "The parts are extended until the first point where the selected faces line up.", icon = "rbxassetid://9756984928" },
-	{ key = "WedgeJoin", label = "Wedge Join", detail = "The parts are extended to inner touch and the remaining gap is filled with wedge parts to form a sharp point. (Good for acute angle joints.)", icon = "rbxassetid://9756984675" },
-	{ key = "RoundedJoin", label = "Rounded Join", detail = "The parts meet at the middle and any exposed gap is filled with a sphere or cylinder part. (Works best on faces which are the same size)", icon = "rbxassetid://9834555074" },
-	{ key = "ButtJoint", label = "Butt Joint", detail = "The parts are extended out such that the first face butts up against the side of the second face, with no overlap. (Only works for right-angle intersections)", icon = "rbxassetid://9756985700" },
-	{ key = "ExtendUpTo", label = "Extend Up To", detail = "The first face is extended out until the first point where it touches the second face. (The first face will be just touching the second face)", icon = "rbxassetid://9756985017" },
-	{ key = "ExtendInto", label = "Extend Into", detail = "The first face is extended out until the last point where it touches the second face. (The first face will be extended just far enough to be completely sunk into the second)", icon = "rbxassetid://9756985126" },
-}
-
-local THRESHOLD_INFO = {
-	{ key = "25", label = "25% Threshold", detail = "A 25% threshold around the edge of the hovered face will instead select the adjacent face allowing you to select backfaces without moving your camera.", icon = "rbxassetid://9758180727" },
-	{ key = "15", label = "15% Threshold", detail = "Same as above but with a 15% threshold.", icon = "rbxassetid://9758180952" },
-	{ key = "Exact", label = "Exact Target", detail = "Exactly the hovered face will be selected. Greater precision but requires a lot more camera movement to select what you want.", icon = "rbxassetid://9758180541" },
-}
-
 local function ResizeMethodPanel(props: {
 	Settings: Settings.ResizeAlignSettings,
 	UpdatedSettings: () -> (),
