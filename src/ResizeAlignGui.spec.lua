@@ -19,6 +19,7 @@ local function makeTestSettings()
 		DoneTutorial = false,
 		HaveHelp = false,
 		ResizeMode = "OuterTouch",
+		AcuteWedgeJoin = true,
 		SelectionThreshold = "25",
 		ClassicUI = false,
 	}
