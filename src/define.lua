@@ -1,3 +1,4 @@
+--!strict
 return {
 	PluginName = "ResizeAlign",
 	ButtonIcon = "rbxassetid://4524348910",

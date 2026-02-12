@@ -1,3 +1,4 @@
+--!strict
 --!nolint DeprecatedApi
 -- Disabled because we still need to copy CollisionGroupId for
 -- legacy support even though it's deprecated.

@@ -1,3 +1,4 @@
+--!strict
 local Src = script.Parent
 local Packages = Src.Parent.Packages
 local React = require(Packages.React)

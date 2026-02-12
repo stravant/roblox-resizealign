@@ -1,3 +1,4 @@
+--!strict
 local CoreGui = game:GetService("CoreGui")
 
 local Src = script.Parent

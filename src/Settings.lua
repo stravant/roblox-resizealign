@@ -1,3 +1,4 @@
+--!strict
 local InitialPosition = Vector2.new(24, 24)
 local kSettingsKey = "resizeAlignState"
 

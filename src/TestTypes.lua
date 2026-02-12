@@ -1,3 +1,4 @@
+--!strict
 type ExpectResult = {
 	toBe: (expected: any) -> (),
 	toEqual: (expected: any) -> (),
