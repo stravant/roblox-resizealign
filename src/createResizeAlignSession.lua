@@ -88,7 +88,7 @@ end
 local function edgesToScreen(edges)
 	local camera = workspace.CurrentCamera
 	local screenEdges = {}
-	for _, edge in pairs(edges) do
+	for _, edge in edges do
 		table.insert(screenEdges, {
 			a = toVec2(camera:WorldToScreenPoint(edge.a)),
 			b = toVec2(camera:WorldToScreenPoint(edge.b)),
@@ -262,7 +262,7 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 
 		local hardCutoff = workspace.CurrentCamera.ViewportSize.Magnitude * 0.2
 
-		for _, edge in ipairs(screenEdges) do
+		for _, edge in screenEdges do
 			local dir, distToEdge = directionAndDistanceToEdge(edge, mouseLocation)
 			local distToOtherEdge = distanceToOppositeEdge(edge, mouseLocation, -dir)
 			if distToOtherEdge then

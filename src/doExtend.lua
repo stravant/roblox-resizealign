@@ -179,7 +179,7 @@ local function getNegativePointToFace(face: Face, points: {Vector3}): Vector3
 	local basePoint, normal = getBasis(face)
 	local minDist = math.huge
 	local minPoint = nil
-	for _, point in pairs(points) do
+	for _, point in points do
 		local dist = (point - basePoint):Dot(normal)
 		if dist < minDist then
 			minDist = dist
@@ -487,7 +487,7 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 			local points = getPoints(faceB.Object)
 			if resizeMode == "ExtendUpTo" then
 				local smallestLen = math.huge
-				for _, v in pairs(points) do
+				for _, v in points do
 					local dist = (v - extendPointA):Dot(getNormal(faceA))
 					if dist < smallestLen then
 						smallestLen = dist
@@ -496,7 +496,7 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 				lenA = smallestLen
 			elseif resizeMode == "ExtendInto" then
 				local largestLen = -math.huge
-				for _, v in pairs(points) do
+				for _, v in points do
 					local dist = (v - extendPointA):Dot(getNormal(faceA))
 					if dist > largestLen then
 						largestLen = dist
@@ -549,7 +549,7 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 		local points = getFacePoints(faceB)
 		local minV =  math.huge
 		local maxV = -math.huge
-		for _, v in pairs(points) do
+		for _, v in points do
 			local proj = (v - extendPointA):Dot(dirA)
 			if proj < minV then minV = proj end
 			if proj > maxV then maxV = proj end
