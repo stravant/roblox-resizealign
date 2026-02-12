@@ -87,4 +87,68 @@ return function(t: TestContext)
 		from:Destroy()
 		to:Destroy()
 	end)
+
+	t.test("Sets surfaces to Smooth", function()
+		local from = Instance.new("Part")
+		from.TopSurface = Enum.SurfaceType.Studs
+		from.BottomSurface = Enum.SurfaceType.Inlet
+
+		local to = Instance.new("Part")
+		to.TopSurface = Enum.SurfaceType.Weld
+		to.BottomSurface = Enum.SurfaceType.Hinge
+		copyPartProps(from, to)
+
+		-- Regardless of source, surfaces should be set to Smooth
+		t.expect(to.TopSurface).toBe(Enum.SurfaceType.Smooth)
+		t.expect(to.BottomSurface).toBe(Enum.SurfaceType.Smooth)
+
+		from:Destroy()
+		to:Destroy()
+	end)
+
+	t.test("Copies MaterialVariant", function()
+		local from = Instance.new("Part")
+		from.MaterialVariant = "TestVariant"
+
+		local to = Instance.new("Part")
+		copyPartProps(from, to)
+
+		t.expect(to.MaterialVariant).toBe("TestVariant")
+
+		from:Destroy()
+		to:Destroy()
+	end)
+
+	t.test("Copies CustomPhysicalProperties", function()
+		local from = Instance.new("Part")
+		from.CustomPhysicalProperties = PhysicalProperties.new(5, 0.3, 0.5, 0.8, 0.2)
+
+		local to = Instance.new("Part")
+		copyPartProps(from, to)
+
+		local props = to.CustomPhysicalProperties
+		t.expect(props ~= nil).toBe(true)
+		if props then
+			t.expect(props.Density).toBe(5)
+			t.expect(props.Friction).toBe(0.3)
+			t.expect(props.Elasticity).toBe(0.5)
+		end
+
+		from:Destroy()
+		to:Destroy()
+	end)
+
+	t.test("Copies CastShadow", function()
+		local from = Instance.new("Part")
+		from.CastShadow = false
+
+		local to = Instance.new("Part")
+		t.expect(to.CastShadow).toBe(true) -- default
+		copyPartProps(from, to)
+
+		t.expect(to.CastShadow).toBe(false)
+
+		from:Destroy()
+		to:Destroy()
+	end)
 end

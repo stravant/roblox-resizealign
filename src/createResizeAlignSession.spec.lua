@@ -200,4 +200,112 @@ return function(t: TestContext)
 		partA:Destroy()
 		partB:Destroy()
 	end)
+
+	t.test("Multiple full cycles work in sequence", function()
+		local session = createResizeAlignSession(t.plugin, makeTestSettings())
+
+		local partA = Instance.new("Part")
+		partA.Size = Vector3.new(4, 4, 4)
+		partA.CFrame = CFrame.new(-10, 0, 0)
+		partA.Parent = workspace
+
+		local partB = Instance.new("Part")
+		partB.Size = Vector3.new(4, 4, 4)
+		partB.CFrame = CFrame.new(10, 0, 0)
+		partB.Parent = workspace
+
+		-- First cycle
+		session.TestSelectFace(makeFace(partA, Enum.NormalId.Right))
+		t.expect(session.GetFaceState()).toBe("FaceB")
+		session.TestSelectFace(makeFace(partB, Enum.NormalId.Left))
+		t.expect(session.GetFaceState()).toBe("FaceA")
+
+		-- Second cycle
+		session.TestSelectFace(makeFace(partB, Enum.NormalId.Right))
+		t.expect(session.GetFaceState()).toBe("FaceB")
+		session.TestSelectFace(makeFace(partA, Enum.NormalId.Left))
+		t.expect(session.GetFaceState()).toBe("FaceA")
+
+		-- Third cycle
+		session.TestSelectFace(makeFace(partA, Enum.NormalId.Top))
+		t.expect(session.GetFaceState()).toBe("FaceB")
+		session.TestSelectFace(makeFace(partB, Enum.NormalId.Bottom))
+		t.expect(session.GetFaceState()).toBe("FaceA")
+
+		session.Destroy()
+		partA:Destroy()
+		partB:Destroy()
+	end)
+
+	t.test("GetSelectedFace returns nil in FaceA state", function()
+		local session = createResizeAlignSession(t.plugin, makeTestSettings())
+		t.expect(session.GetSelectedFace() == nil).toBe(true)
+		session.Destroy()
+	end)
+
+	t.test("Destroy clears selected face", function()
+		local session = createResizeAlignSession(t.plugin, makeTestSettings())
+
+		local part = Instance.new("Part")
+		part.Parent = workspace
+
+		session.TestSelectFace(makeFace(part, Enum.NormalId.Top))
+		t.expect(session.GetFaceState()).toBe("FaceB")
+		t.expect(session.GetSelectedFace() ~= nil).toBe(true)
+
+		session.Destroy()
+		-- After destroy, querying state should still work (no errors)
+		-- GetSelectedFace should return nil since mFaceA was cleared
+		t.expect(session.GetSelectedFace() == nil).toBe(true)
+		t.expect(session.GetHoverFace() == nil).toBe(true)
+
+		part:Destroy()
+	end)
+
+	t.test("Reset in FaceA state is a no-op", function()
+		local session = createResizeAlignSession(t.plugin, makeTestSettings())
+
+		local fireCount = 0
+		session.ChangeSignal:Connect(function()
+			fireCount += 1
+		end)
+
+		session.TestResetFace()
+		-- Reset in FaceA state should not fire ChangeSignal
+		t.expect(fireCount).toBe(0)
+		t.expect(session.GetFaceState()).toBe("FaceA")
+
+		session.Destroy()
+	end)
+
+	t.test("Select then reset then select again works", function()
+		local session = createResizeAlignSession(t.plugin, makeTestSettings())
+
+		local partA = Instance.new("Part")
+		partA.Size = Vector3.new(4, 4, 4)
+		partA.CFrame = CFrame.new(-5, 0, 0)
+		partA.Parent = workspace
+
+		local partB = Instance.new("Part")
+		partB.Size = Vector3.new(4, 4, 4)
+		partB.CFrame = CFrame.new(5, 0, 0)
+		partB.Parent = workspace
+
+		-- Select A, then cancel
+		session.TestSelectFace(makeFace(partA, Enum.NormalId.Right))
+		t.expect(session.GetFaceState()).toBe("FaceB")
+		session.TestResetFace()
+		t.expect(session.GetFaceState()).toBe("FaceA")
+		t.expect(session.GetSelectedFace() == nil).toBe(true)
+
+		-- Can select again
+		session.TestSelectFace(makeFace(partB, Enum.NormalId.Left))
+		t.expect(session.GetFaceState()).toBe("FaceB")
+		t.expect(session.GetSelectedFace() ~= nil).toBe(true)
+		t.expect(session.GetSelectedFace().Object).toBe(partB)
+
+		session.Destroy()
+		partA:Destroy()
+		partB:Destroy()
+	end)
 end

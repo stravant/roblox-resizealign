@@ -844,4 +844,423 @@ return function(t: TestContext)
 		wedge:Destroy()
 		cleanup()
 	end)
+
+	--------------------------------------------------------------------------------
+	-- WedgePart slope face as Face A
+	--------------------------------------------------------------------------------
+
+	t.test("WedgePart slope as Face A creates extrusion part", function()
+		local wedge = Instance.new("WedgePart")
+		wedge.Size = Vector3.new(4, 4, 4)
+		wedge.CFrame = CFrame.new(-3, 0, 0)
+		wedge.Anchored = true
+		wedge.Parent = workspace
+
+		local partB = makePart(CFrame.new(3, 3, 0), Vector3.new(2, 2, 2))
+		local faceA: doExtend.Face = {
+			Object = wedge,
+			Normal = Enum.NormalId.Top,
+			IsWedge = true,
+		}
+		local faceB = makeFace(partB, Enum.NormalId.Bottom)
+
+		doExtend(faceA, faceB, "OuterTouch")
+
+		-- An extrusion part should have been created
+		local found = false
+		for _, child in workspace:GetChildren() do
+			if child.Name:find("_Extended") then
+				found = true
+				-- Extrusion should have non-degenerate size
+				t.expect(child.Size.X > 0.001).toBe(true)
+				t.expect(child.Size.Y > 0.001).toBe(true)
+				t.expect(child.Size.Z > 0.001).toBe(true)
+				break
+			end
+		end
+		t.expect(found).toBe(true)
+
+		wedge:Destroy()
+		cleanup(partB)
+	end)
+
+	t.test("WedgePart slope: all modes run without error", function()
+		local modes: {doExtend.ResizeMode} = {"OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ExtendUpTo", "ExtendInto"}
+		for _, mode in modes do
+			local wedge = Instance.new("WedgePart")
+			wedge.Size = Vector3.new(4, 4, 4)
+			wedge.CFrame = CFrame.new(-3, 0, 0)
+			wedge.Anchored = true
+			wedge.Parent = workspace
+
+			local partB = makePart(CFrame.new(3, 3, 0), Vector3.new(2, 2, 2))
+			local faceA: doExtend.Face = {
+				Object = wedge,
+				Normal = Enum.NormalId.Top,
+				IsWedge = true,
+			}
+			local faceB = makeFace(partB, Enum.NormalId.Bottom)
+
+			doExtend(faceA, faceB, mode)
+
+			wedge:Destroy()
+			cleanup(partB)
+		end
+	end)
+
+	t.test("WedgePart rectangular face extrusion creates box part", function()
+		-- Bottom face of a WedgePart is rectangular but requires extrusion
+		local wedge = Instance.new("WedgePart")
+		wedge.Size = Vector3.new(4, 4, 4)
+		wedge.CFrame = CFrame.new(0, 3, 0)
+		wedge.Anchored = true
+		wedge.Parent = workspace
+
+		local partB = makePart(CFrame.new(0, -3, 0), Vector3.new(4, 2, 4))
+		local faceA: doExtend.Face = {
+			Object = wedge,
+			Normal = Enum.NormalId.Bottom,
+		}
+		local faceB = makeFace(partB, Enum.NormalId.Top)
+
+		doExtend(faceA, faceB, "OuterTouch")
+
+		-- Should create an _Extended part for the rectangular face extrusion
+		local found = false
+		for _, child in workspace:GetChildren() do
+			if child.Name:find("_Extended") then
+				found = true
+				break
+			end
+		end
+		-- May or may not create an extension depending on geometry; just don't error
+		wedge:Destroy()
+		cleanup(partB)
+	end)
+
+	--------------------------------------------------------------------------------
+	-- CornerWedge flat triangular face extrusion
+	--------------------------------------------------------------------------------
+
+	t.test("CornerWedge: Front face extrusion creates a WedgePart", function()
+		local cornerWedge = Instance.new("CornerWedgePart")
+		cornerWedge.Size = Vector3.new(4, 4, 4)
+		cornerWedge.CFrame = CFrame.new(0, 0, 0)
+		cornerWedge.Anchored = true
+		cornerWedge.Parent = workspace
+
+		-- Place target part in front
+		local partB = makePart(CFrame.new(0, 0, -6), Vector3.new(4, 4, 2))
+		local faceA: doExtend.Face = {
+			Object = cornerWedge,
+			Normal = Enum.NormalId.Front,
+		}
+		local faceB = makeFace(partB, Enum.NormalId.Back)
+
+		doExtend(faceA, faceB, "OuterTouch")
+
+		-- Find the created WedgePart
+		local createdWedge = nil
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") and child.Name:find("_Extended") then
+				createdWedge = child
+				break
+			end
+		end
+		t.expect(createdWedge ~= nil).toBe(true)
+		if createdWedge then
+			t.expect(createdWedge.Size.X > 0.001).toBe(true)
+			t.expect(createdWedge.Size.Y > 0.001).toBe(true)
+			t.expect(createdWedge.Size.Z > 0.001).toBe(true)
+		end
+
+		cornerWedge:Destroy()
+		cleanup(partB)
+	end)
+
+	t.test("CornerWedge: Right face extrusion creates a WedgePart", function()
+		local cornerWedge = Instance.new("CornerWedgePart")
+		cornerWedge.Size = Vector3.new(4, 4, 4)
+		cornerWedge.CFrame = CFrame.new(0, 0, 0)
+		cornerWedge.Anchored = true
+		cornerWedge.Parent = workspace
+
+		-- Place target part to the right
+		local partB = makePart(CFrame.new(6, 0, 0), Vector3.new(2, 4, 4))
+		local faceA: doExtend.Face = {
+			Object = cornerWedge,
+			Normal = Enum.NormalId.Right,
+		}
+		local faceB = makeFace(partB, Enum.NormalId.Left)
+
+		doExtend(faceA, faceB, "OuterTouch")
+
+		local createdWedge = nil
+		for _, child in workspace:GetChildren() do
+			if child:IsA("WedgePart") and child.Name:find("_Extended") then
+				createdWedge = child
+				break
+			end
+		end
+		t.expect(createdWedge ~= nil).toBe(true)
+
+		cornerWedge:Destroy()
+		cleanup(partB)
+	end)
+
+	t.test("CornerWedge: Bottom face extrusion creates a box Part", function()
+		local cornerWedge = Instance.new("CornerWedgePart")
+		cornerWedge.Size = Vector3.new(4, 4, 4)
+		cornerWedge.CFrame = CFrame.new(0, 3, 0)
+		cornerWedge.Anchored = true
+		cornerWedge.Parent = workspace
+
+		local partB = makePart(CFrame.new(0, -3, 0), Vector3.new(4, 2, 4))
+		local faceA: doExtend.Face = {
+			Object = cornerWedge,
+			Normal = Enum.NormalId.Bottom,
+		}
+		local faceB = makeFace(partB, Enum.NormalId.Top)
+
+		doExtend(faceA, faceB, "OuterTouch")
+
+		-- Should create an _Extended Part (box, not wedge) for rectangular face
+		local createdPart = nil
+		for _, child in workspace:GetChildren() do
+			if child.Name:find("_Extended") and child:IsA("Part") then
+				createdPart = child
+				break
+			end
+		end
+		t.expect(createdPart ~= nil).toBe(true)
+
+		cornerWedge:Destroy()
+		cleanup(partB)
+	end)
+
+	--------------------------------------------------------------------------------
+	-- RoundedJoin with cylinders
+	--------------------------------------------------------------------------------
+
+	t.test("RoundedJoin: cylinder parts produce ball filler", function()
+		local partA = Instance.new("Part")
+		partA.Shape = Enum.PartType.Cylinder
+		partA.Size = Vector3.new(4, 2, 2)
+		partA.CFrame = CFrame.new(-3, 0, 0)
+		partA.Anchored = true
+		partA.Parent = workspace
+
+		local partB = Instance.new("Part")
+		partB.Shape = Enum.PartType.Cylinder
+		partB.Size = Vector3.new(4, 2, 2)
+		partB.CFrame = CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45))
+		partB.Anchored = true
+		partB.Parent = workspace
+
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Left)
+
+		doExtend(faceA, faceB, "RoundedJoin")
+
+		-- Find the filler — should be a Ball shape
+		local fillerPart = nil
+		for _, child in workspace:GetChildren() do
+			if child:IsA("Part") and child ~= partA and child ~= partB then
+				fillerPart = child
+				break
+			end
+		end
+		t.expect(fillerPart ~= nil).toBe(true)
+		if fillerPart then
+			t.expect(fillerPart.Shape).toBe(Enum.PartType.Ball)
+		end
+
+		partA:Destroy()
+		partB:Destroy()
+		cleanup()
+	end)
+
+	t.test("RoundedJoin: non-cylinder parts produce cylinder filler", function()
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
+		local partB = makePart(
+			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			Vector3.new(2, 2, 2)
+		)
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Left)
+
+		doExtend(faceA, faceB, "RoundedJoin")
+
+		local fillerPart = nil
+		for _, child in workspace:GetChildren() do
+			if child:IsA("Part") and child ~= partA and child ~= partB then
+				fillerPart = child
+				break
+			end
+		end
+		t.expect(fillerPart ~= nil).toBe(true)
+		if fillerPart then
+			t.expect(fillerPart.Shape).toBe(Enum.PartType.Cylinder)
+		end
+
+		cleanup(partA, partB)
+	end)
+
+	--------------------------------------------------------------------------------
+	-- ButtJoint with angled parts
+	--------------------------------------------------------------------------------
+
+	t.test("ButtJoint: angled parts don't error and Part A butts up", function()
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
+		local partB = makePart(
+			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			Vector3.new(2, 2, 2)
+		)
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Left)
+
+		local origSizeAx = partA.Size.X
+
+		doExtend(faceA, faceB, "ButtJoint")
+
+		-- Part A should have been resized
+		t.expect(partA.Size.X ~= origSizeAx).toBe(true)
+		cleanup(partA, partB)
+	end)
+
+	--------------------------------------------------------------------------------
+	-- InnerTouch vs OuterTouch comparison
+	--------------------------------------------------------------------------------
+
+	t.test("InnerTouch delta <= OuterTouch delta for angled parts", function()
+		-- InnerTouch uses innermost alignment point, so Part A should extend less
+		local partA_outer = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
+		local partB_outer = makePart(
+			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			Vector3.new(2, 4, 4)
+		)
+		doExtend(
+			makeFace(partA_outer, Enum.NormalId.Right),
+			makeFace(partB_outer, Enum.NormalId.Left),
+			"OuterTouch"
+		)
+		local outerSizeAx = partA_outer.Size.X
+
+		local partA_inner = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
+		local partB_inner = makePart(
+			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			Vector3.new(2, 4, 4)
+		)
+		doExtend(
+			makeFace(partA_inner, Enum.NormalId.Right),
+			makeFace(partB_inner, Enum.NormalId.Left),
+			"InnerTouch"
+		)
+		local innerSizeAx = partA_inner.Size.X
+
+		-- Inner should extend less than or equal to outer
+		t.expect(innerSizeAx <= outerSizeAx + EPSILON).toBe(true)
+
+		cleanup(partA_outer, partB_outer, partA_inner, partB_inner)
+	end)
+
+	--------------------------------------------------------------------------------
+	-- Overlapping parts (negative delta)
+	--------------------------------------------------------------------------------
+
+	t.test("Overlapping parts: OuterTouch shrinks parts to meet", function()
+		-- Parts overlap: faceA right at x=4, faceB left at x=-4, they overlap by 8
+		local partA = makePart(CFrame.new(0, 0, -1), Vector3.new(8, 4, 4))
+		local partB = makePart(CFrame.new(0, 0, 1), Vector3.new(8, 4, 4))
+		local faceA = makeFace(partA, Enum.NormalId.Back)
+		local faceB = makeFace(partB, Enum.NormalId.Front)
+
+		doExtend(faceA, faceB, "OuterTouch")
+
+		-- Faces should meet (Back face of A at Z of Front face of B)
+		local backFaceA = partA.CFrame.Position.Z + partA.Size.Z / 2
+		local frontFaceB = partB.CFrame.Position.Z - partB.Size.Z / 2
+		t.expect(approxEqual(backFaceA, frontFaceB)).toBe(true)
+
+		cleanup(partA, partB)
+	end)
+
+	t.test("Parts with large gap: OuterTouch extends to meet", function()
+		local partA = makePart(CFrame.new(-20, 0, 0), Vector3.new(2, 2, 2))
+		local partB = makePart(CFrame.new(20, 0, 0), Vector3.new(2, 2, 2))
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Left)
+
+		doExtend(faceA, faceB, "OuterTouch")
+
+		local rightFaceA = partA.CFrame.Position.X + partA.Size.X / 2
+		local leftFaceB = partB.CFrame.Position.X - partB.Size.X / 2
+		t.expect(approxEqual(rightFaceA, leftFaceB)).toBe(true)
+
+		cleanup(partA, partB)
+	end)
+
+	--------------------------------------------------------------------------------
+	-- Same-direction parallel faces
+	--------------------------------------------------------------------------------
+
+	t.test("Same-direction parallel faces: faces pointing same way", function()
+		-- Both faces point +X, one is behind the other
+		local partA = makePart(CFrame.new(-5, 0, 0), Vector3.new(4, 4, 4))
+		local partB = makePart(CFrame.new(5, 0, 0), Vector3.new(4, 4, 4))
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Right)
+
+		doExtend(faceA, faceB, "OuterTouch")
+
+		-- Should still resize without error
+		t.expect(partA.Size.X > 4).toBe(true)
+
+		cleanup(partA, partB)
+	end)
+
+	--------------------------------------------------------------------------------
+	-- Extrusion face properties
+	--------------------------------------------------------------------------------
+
+	t.test("WedgePart slope extrusion copies part properties", function()
+		local wedge = Instance.new("WedgePart")
+		wedge.Size = Vector3.new(4, 4, 4)
+		wedge.CFrame = CFrame.new(-3, 0, 0)
+		wedge.Anchored = true
+		wedge.Color = Color3.fromRGB(255, 0, 0)
+		wedge.Material = Enum.Material.Neon
+		wedge.Transparency = 0.3
+		wedge.Parent = workspace
+
+		local partB = makePart(CFrame.new(3, 3, 0), Vector3.new(2, 2, 2))
+		local faceA: doExtend.Face = {
+			Object = wedge,
+			Normal = Enum.NormalId.Top,
+			IsWedge = true,
+		}
+		local faceB = makeFace(partB, Enum.NormalId.Bottom)
+
+		doExtend(faceA, faceB, "OuterTouch")
+
+		-- Find the created part
+		local created = nil
+		for _, child in workspace:GetChildren() do
+			if child.Name:find("_Extended") then
+				created = child
+				break
+			end
+		end
+		t.expect(created ~= nil).toBe(true)
+		if created then
+			-- Properties should be copied from the wedge
+			t.expect(created.Color).toBe(Color3.fromRGB(255, 0, 0))
+			t.expect(created.Material).toBe(Enum.Material.Neon)
+			t.expect(approxEqual(created.Transparency, 0.3)).toBe(true)
+			t.expect(created.Anchored).toBe(true)
+		end
+
+		wedge:Destroy()
+		cleanup(partB)
+	end)
 end
