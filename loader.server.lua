@@ -56,8 +56,10 @@ local function doInitialLoad()
 end
 
 -- Lazy load the main plugin on first click
-local clickedCn = buttonClicked:Connect(function()
+local clickedCn
+clickedCn = buttonClicked:Connect(function()
 	if not loaded then
+		clickedCn:Disconnect()
 		doInitialLoad()
 		-- Refire event now that the plugin is listening
 		buttonClicked:Fire()
@@ -70,6 +72,3 @@ if panel.Enabled then
 	doInitialLoad()
 end
 
-plugin.Deactivation:Connect(function()
-	clickedCn:Disconnect()
-end)
