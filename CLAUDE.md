@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ResizeAlign is a Roblox Studio plugin which allows the user to click two faces of parts in 3D space, and have the plugin resize/extend those parts so the faces meet. Six resize modes are supported: OuterTouch, InnerTouch, RoundedJoin, ButtJoint, ExtendUpTo, and ExtendInto.
+ResizeAlign is a Roblox Studio plugin which allows the user to click two faces of parts in 3D space, and have the plugin resize/extend those parts so the faces meet. Seven resize modes are supported: OuterTouch, InnerTouch, WedgeJoin, RoundedJoin, ButtJoint, ExtendUpTo, and ExtendInto.
 It outputs a `.rbxmx` plugin file built via Rojo.
 
 ## Build Commands
@@ -31,7 +31,6 @@ Three-layer design:
    - `src/createResizeAlignSession.lua` — Session lifecycle: face selection FSM (FaceA → FaceB), input handling via UserInputService, edge-threshold smart face detection, DraggerHandler for Ctrl+click mode.
    - `src/doExtend.lua` — Core resize algorithm: computes how to resize two parts so their selected faces meet according to the chosen mode. Integrates with ChangeHistoryService and JointMaker.
    - `src/FaceHighlight.lua` — React component rendering face adornments (BoxHandleAdornment + CylinderHandleAdornments) for hover/selected faces.
-   - `src/FaceDisplay.lua` — Legacy imperative face rendering utility (unused, kept as reference).
    - `src/copyPartProps.lua` — Copies physical/visual properties when creating new parts (used by RoundedJoin fill).
    - `src/TestTypes.lua` — Types definition of the testing framework, spec files take in a type from here.
 
