@@ -134,7 +134,7 @@ local function SelectionBehaviorPanel(props: {
 })
 	local current = props.Settings.SelectionThreshold
 	return e(SubPanel, {
-		Title = "Selection Reach Around Edges",
+		Title = "Reach Around Edge Threshold",
 		LayoutOrder = props.LayoutOrder,
 		Padding = UDim.new(0, 4),
 	}, {
@@ -180,10 +180,10 @@ local function SelectionBehaviorPanel(props: {
 			}),
 			Help = e(HelpGui.BasicTooltip, {
 				HelpRichText =
-					"Edge threshold for selecting adjacent faces:\n" ..
+					"How much margin near an edge should \"Reach Around\" for the back face to allow selection without camera movement.\n" ..
 					"<b>•25%</b> — A large threshold; easier to select backfaces.\n" ..
 					"<b>•15%</b> — Same behavior but with a smaller threshold.\n" ..
-					"<b>•Exact</b> — Only the directly hovered face is selected.",
+					"<b>•Exact</b> — Only the directly hovered face is selected; More precision.",
 			}),
 		}),
 	})
