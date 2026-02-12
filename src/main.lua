@@ -12,116 +12,112 @@ local ResizeAlignGui = require("./ResizeAlignGui")
 local PluginGuiTypes = require("./PluginGui/Types")
 
 return function(plugin: Plugin, panel: DockWidgetPluginGui, buttonClicked: Signal.Signal<>, setButtonActive: (active: boolean) -> ())
-	local session: createResizeAlignSession.ResizeAlignSession? = nil
+	local mSession: createResizeAlignSession.ResizeAlignSession? = nil
 
-	local active = false
+	local mActive = false
 
 	local activeSettings = Settings.Load(plugin)
 
-	local pluginActive = false
+	local mPluginActive = false
 
-	local reactRoot: ReactRoblox.RootType? = nil
-	local reactScreenGui: LayerCollector? = nil
+	local mReactRoot: ReactRoblox.RootType? = nil
+	local mReactScreenGui: LayerCollector? = nil
 
 	local handleAction: (string) -> () = nil
 
 	local function destroyReactRoot()
-		if reactRoot then
-			reactRoot:unmount()
-			reactRoot = nil
+		if mReactRoot then
+			mReactRoot:unmount()
+			mReactRoot = nil
 		end
-		if reactScreenGui then
-			reactScreenGui:Destroy()
-			reactScreenGui = nil
+		if mReactScreenGui then
+			mReactScreenGui:Destroy()
+			mReactScreenGui = nil
 		end
 	end
 	local function createReactRoot()
 		if panel.Enabled then
-			reactRoot = ReactRoblox.createRoot(panel)
+			mReactRoot = ReactRoblox.createRoot(panel)
 		else
 			local screen = Instance.new("ScreenGui")
 			screen.Name = "ResizeAlignMainGui"
 			screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 			screen.Parent = CoreGui
-			reactScreenGui = screen
-			reactRoot = ReactRoblox.createRoot(screen)
+			mReactScreenGui = screen
+			mReactRoot = ReactRoblox.createRoot(screen)
 		end
 	end
 
 	local function getGuiState(): PluginGuiTypes.PluginGuiMode
-		if not active then
-			return "inactive"
-		else
-			return "active"
-		end
+		return if mActive then "active" else "inactive"
 	end
 
 	local function getFaceState(): "FaceA" | "FaceB"
-		if session then
-			return session.GetFaceState()
+		if mSession then
+			return mSession.GetFaceState()
 		end
 		return "FaceA"
 	end
 
 	local function updateUI()
-		local needsUI = active or panel.Enabled
+		local needsUI = mActive or panel.Enabled
 		if needsUI then
-			if not reactRoot then
+			if not mReactRoot then
 				createReactRoot()
-			elseif panel.Enabled and reactScreenGui ~= nil then
+			elseif panel.Enabled and mReactScreenGui ~= nil then
 				destroyReactRoot()
 				createReactRoot()
-			elseif not panel.Enabled and reactScreenGui == nil then
+			elseif not panel.Enabled and mReactScreenGui == nil then
 				destroyReactRoot()
 				createReactRoot()
 			end
 
-			assert(reactRoot, "We just created it")
-			reactRoot:render(React.createElement(ResizeAlignGui, {
+			assert(mReactRoot, "We just created it")
+			mReactRoot:render(React.createElement(ResizeAlignGui, {
 				GuiState = getGuiState(),
 				CurrentSettings = activeSettings,
 				UpdatedSettings = function()
-					if session then
-						session.Update()
+					if mSession then
+						mSession.Update()
 					end
 					updateUI()
 				end,
 				HandleAction = handleAction,
 				Panelized = panel.Enabled,
 				FaceState = getFaceState(),
-				HoverFace = if session then session.GetHoverFace() else nil,
-				SelectedFace = if session then session.GetSelectedFace() else nil,
+				HoverFace = if mSession then mSession.GetHoverFace() else nil,
+				SelectedFace = if mSession then mSession.GetSelectedFace() else nil,
 			}))
-		elseif reactRoot then
+		elseif mReactRoot then
 			destroyReactRoot()
 		end
 	end
 
 	local function destroySession()
-		if session then
-			session.Destroy()
-			session = nil
+		if mSession then
+			mSession.Destroy()
+			mSession = nil
 		end
 	end
 
 	local function createSession()
-		if not session then
+		if not mSession then
 			local newSession = createResizeAlignSession(plugin, activeSettings)
 			newSession.ChangeSignal:Connect(updateUI)
-			session = newSession
+			mSession = newSession
 		end
 	end
 
 	local function setActive(newActive: boolean)
-		if active == newActive then
+		if mActive == newActive then
 			return
 		end
 		setButtonActive(newActive)
-		active = newActive
+		mActive = newActive
 		if newActive then
-			if not pluginActive then
+			if not mPluginActive then
 				plugin:Activate(true)
-				pluginActive = true
+				mPluginActive = true
 			end
 			createSession()
 		else
@@ -154,7 +150,7 @@ return function(plugin: Plugin, panel: DockWidgetPluginGui, buttonClicked: Signa
 	end
 
 	local clickedCn = buttonClicked:Connect(function()
-		if active then
+		if mActive then
 			setActive(false)
 		else
 			doReset()
@@ -165,7 +161,7 @@ return function(plugin: Plugin, panel: DockWidgetPluginGui, buttonClicked: Signa
 	updateUI()
 
 	plugin.Deactivation:Connect(function()
-		pluginActive = false
+		mPluginActive = false
 		setActive(false)
 	end)
 
