@@ -9,6 +9,11 @@ local JointMaker = require(DraggerFramework.Utility.JointMaker)
 
 local copyPartProps = require(Src.copyPartProps)
 local Settings = require(Src.Settings)
+local ShapeUtils = require(Src.ShapeUtils)
+
+local otherNormals = ShapeUtils.otherNormals
+local isWedgeShape = ShapeUtils.isWedgeShape
+local isCornerWedgeShape = ShapeUtils.isCornerWedgeShape
 
 export type Face = {
 	Object: BasePart,
@@ -19,26 +24,8 @@ export type Face = {
 
 export type ResizeMode = Settings.ResizeMode
 
-local function otherNormals(dir: Vector3)
-	if math.abs(dir.X) > 0 then
-		return Vector3.new(0, 1, 0), Vector3.new(0, 0, 1)
-	elseif math.abs(dir.Y) > 0 then
-		return Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
-	else
-		return Vector3.new(1, 0, 0), Vector3.new(0, 1, 0)
-	end
-end
-
 local function isCylinder(part: BasePart)
 	return part:IsA("Part") and part.Shape == Enum.PartType.Cylinder
-end
-
-local function isWedgeShape(part: BasePart)
-	return part:IsA("WedgePart") or (part:IsA("Part") and part.Shape == Enum.PartType.Wedge)
-end
-
-local function isCornerWedgeShape(part: BasePart)
-	return part:IsA("CornerWedgePart") or (part:IsA("Part") and part.Shape == Enum.PartType.CornerWedge)
 end
 
 local function getFacePoints(face: Face)

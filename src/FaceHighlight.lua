@@ -6,21 +6,11 @@ local React = require(Packages.React)
 local e = React.createElement
 
 local doExtend = require(Src.doExtend)
+local ShapeUtils = require(Src.ShapeUtils)
 type Face = doExtend.Face
 
-local function isCornerWedgeShape(part: BasePart)
-	return part:IsA("CornerWedgePart") or (part:IsA("Part") and part.Shape == Enum.PartType.CornerWedge)
-end
-
-local function otherNormals(dir: Vector3)
-	if math.abs(dir.X) > 0 then
-		return Vector3.new(0, 1, 0), Vector3.new(0, 0, 1)
-	elseif math.abs(dir.Y) > 0 then
-		return Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
-	else
-		return Vector3.new(1, 0, 0), Vector3.new(0, 1, 0)
-	end
-end
+local isCornerWedgeShape = ShapeUtils.isCornerWedgeShape
+local otherNormals = ShapeUtils.otherNormals
 
 -- B should be vertex at the right angle
 local function RightAngleTriangleHandleAdornment(props: {

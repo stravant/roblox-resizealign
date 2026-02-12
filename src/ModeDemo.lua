@@ -4,10 +4,13 @@ local React = require(Packages.React)
 
 local Colors = require("./PluginGui/Colors")
 local Settings = require("./Settings")
+local ShapeUtils = require("./ShapeUtils")
 
 local e = React.createElement
 
 type ResizeMode = Settings.ResizeMode
+
+local otherNormals = ShapeUtils.otherNormals
 
 local PART_A_COLOR = Color3.fromRGB(200, 50, 50)
 local PART_B_COLOR = Color3.fromRGB(50, 80, 220)
@@ -16,16 +19,6 @@ local FILLER_COLOR = Color3.fromRGB(80, 200, 50)
 --------------------------------------------------------------------------------
 -- Geometry helpers (mirrors doExtend logic for demo computation)
 --------------------------------------------------------------------------------
-
-local function otherNormals(dir: Vector3): (Vector3, Vector3)
-	if math.abs(dir.X) > 0 then
-		return Vector3.new(0, 1, 0), Vector3.new(0, 0, 1)
-	elseif math.abs(dir.Y) > 0 then
-		return Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
-	else
-		return Vector3.new(1, 0, 0), Vector3.new(0, 1, 0)
-	end
-end
 
 local function getFaceCorners(cf: CFrame, size: Vector3, normalId: Enum.NormalId): {Vector3}
 	local hsize = size / 2

@@ -8,6 +8,7 @@ local DraggerHandler = require(Packages.DraggerHandler)
 
 local doExtend = require(Src.doExtend)
 local Settings = require(Src.Settings)
+local ShapeUtils = require(Src.ShapeUtils)
 
 type Face = doExtend.Face
 
@@ -206,16 +207,16 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 
 		local isWedgeFace = false
 		local cornerWedgeSide = nil
-		local isWedgeShape = hit:IsA("WedgePart") or (hit:IsA("Part") and hit.Shape == Enum.PartType.Wedge)
-		local isCornerWedgeShape = hit:IsA("CornerWedgePart") or (hit:IsA("Part") and hit.Shape == Enum.PartType.CornerWedge)
+		local isWedge = ShapeUtils.isWedgeShape(hit)
+		local isCornerWedge = ShapeUtils.isCornerWedgeShape(hit)
 		local hitNormal = result.Normal
 		local cf = hit.CFrame
-		if isWedgeShape then
+		if isWedge then
 			local slopeNormal = cf.YVector * halfSize.Z - cf.ZVector * halfSize.Y
 			if slopeNormal.Magnitude > 0.001 then
 				isWedgeFace = hitNormal:Dot(slopeNormal.Unit) > 0.99
 			end
-		elseif isCornerWedgeShape then
+		elseif isCornerWedge then
 			local rightNormal = cf.YVector * halfSize.X - cf.XVector * halfSize.Y
 			local backNormal = cf.YVector * halfSize.Z + cf.ZVector * halfSize.Y
 			if rightNormal.Magnitude > 0.001 and hitNormal:Dot(rightNormal.Unit) > 0.99 then
