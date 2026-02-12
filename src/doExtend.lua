@@ -8,6 +8,7 @@ local DraggerFramework = require(Packages.DraggerFramework)
 local JointMaker = require(DraggerFramework.Utility.JointMaker)
 
 local copyPartProps = require(Src.copyPartProps)
+local Settings = require(Src.Settings)
 
 export type Face = {
 	Object: BasePart,
@@ -16,7 +17,7 @@ export type Face = {
 	CornerWedgeSide: ("Right" | "Back")?,
 }
 
-export type ResizeMode = "OuterTouch" | "InnerTouch" | "WedgeJoin" | "RoundedJoin" | "ButtJoint" | "ExtendUpTo" | "ExtendInto"
+export type ResizeMode = Settings.ResizeMode
 
 local function otherNormals(dir: Vector3)
 	if math.abs(dir.X) > 0 then
