@@ -114,7 +114,7 @@ dependencies = [["DraggerFramework", "stravant/draggerframework@0.1.4"]]
 
 [[package]]
 name = "stravant/geometry"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = []
 
 [[package]]
@@ -125,4 +125,4 @@ dependencies = []
 [[package]]
 name = "stravant/roblox-resizealign"
 version = "2.0.0"
-dependencies = [["DraggerFramework", "stravant/draggerframework@0.1.4"], ["DraggerHandler", "stravant/dragger-handler@0.1.3"], ["Geometry", "stravant/geometry@0.1.2"], ["React", "jsdotlua/react@17.2.1"], ["ReactRoblox", "jsdotlua/react-roblox@17.2.1"], ["Signal", "stravant/goodsignal@0.3.1"], ["createSharedToolbar", "stravant/create-shared-toolbar@0.1.0"]]
+dependencies = [["DraggerFramework", "stravant/draggerframework@0.1.4"], ["DraggerHandler", "stravant/dragger-handler@0.1.3"], ["Geometry", "stravant/geometry@0.1.3"], ["React", "jsdotlua/react@17.2.1"], ["ReactRoblox", "jsdotlua/react-roblox@17.2.1"], ["Signal", "stravant/goodsignal@0.3.1"], ["createSharedToolbar", "stravant/create-shared-toolbar@0.1.0"]]
