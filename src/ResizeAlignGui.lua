@@ -310,11 +310,10 @@ local function ClassicResizeMethodPanel(props: {
 	}, {
 		OuterTouch = makeButton("OuterTouch", "Outer Touch", "extend to outermost alignment", 1),
 		InnerTouch = makeButton("InnerTouch", "Inner Touch", "extend to innermost alignment", 2),
-		WedgeJoin = makeButton("WedgeJoin", "Wedge Join", "inner touch with wedge fill", 3),
-		RoundedJoin = makeButton("RoundedJoin", "Rounded Join", "meet in the middle with filler", 4),
-		ButtJoint = makeButton("ButtJoint", "Butt Joint", "butt up against second face", 5),
-		ExtendUpTo = makeButton("ExtendUpTo", "Extend Up To", "extend to first contact", 6),
-		ExtendInto = makeButton("ExtendInto", "Extend Into", "extend to full penetration", 7),
+		RoundedJoin = makeButton("RoundedJoin", "Rounded Join", "meet in the middle with filler", 3),
+		ButtJoint = makeButton("ButtJoint", "Butt Joint", "butt up against second face", 4),
+		ExtendUpTo = makeButton("ExtendUpTo", "Extend Up To", "extend to first contact", 5),
+		ExtendInto = makeButton("ExtendInto", "Extend Into", "extend to full penetration", 6),
 	})
 end
 
