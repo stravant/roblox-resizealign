@@ -130,8 +130,9 @@ return function(t: TestContext)
 		t.expect(props ~= nil).toBe(true)
 		if props then
 			t.expect(props.Density).toBe(5)
-			t.expect(props.Friction).toBe(0.3)
-			t.expect(props.Elasticity).toBe(0.5)
+			-- PhysicalProperties uses single-precision floats, so use approximate comparison
+			t.expect(math.abs(props.Friction - 0.3) < 0.001).toBe(true)
+			t.expect(math.abs(props.Elasticity - 0.5) < 0.001).toBe(true)
 		end
 
 		from:Destroy()

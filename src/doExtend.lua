@@ -313,14 +313,15 @@ local function fillJoint(faceA: Face, faceB: Face, fillPoint: Vector3, fillAxis:
 	local length = (maxProj - minProj)
 	local radius = maxRadius
 	local cyl = Instance.new("Part")
+	copyPartProps(faceB.Object, cyl)
+	cyl.Size = Vector3.new(length, 2 * radius, 2 * radius)
+	cyl.CFrame = CFrame.fromMatrix(centerPoint, fillAxis, getNormal(faceB))
+	-- Set Shape after Size so Roblox doesn't reset it due to size constraints
 	if isCylinder(faceA.Object) and isCylinder(faceB.Object) then
 		cyl.Shape = Enum.PartType.Ball
 	else
 		cyl.Shape = Enum.PartType.Cylinder
 	end
-	copyPartProps(faceB.Object, cyl)
-	cyl.Size = Vector3.new(length, 2 * radius, 2 * radius)
-	cyl.CFrame = CFrame.fromMatrix(centerPoint, fillAxis, getNormal(faceB))
 	cyl.Parent = faceB.Object.Parent
 end
 
