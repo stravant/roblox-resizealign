@@ -7,6 +7,7 @@ end
 
 _G.__ROACT_17_MOCK_SCHEDULER__ = true
 
+local CaptureService = game:GetService("CaptureService")
 local HttpService = game:GetService("HttpService")
 
 local WS_URL = "ws://localhost:38741"
@@ -26,6 +27,7 @@ type TestContext = {
 	test: (name: string, fn: () -> ()) -> (),
 	expect: (value: any) -> ExpectResult,
 	fail: (message: string) -> (),
+	screenshot: (name: string?) -> (),
 }
 
 local function deepEqual(a: any, b: any): boolean
@@ -81,6 +83,29 @@ local function sendJson(ws: WebSocketClient, data: { [string]: any })
 	ws:Send(HttpService:JSONEncode(data))
 end
 
+local function takeScreenshot(ws: WebSocketClient, name: string?)
+	local done = false
+	local success = false
+	local captureOk, captureErr: any = pcall(function()
+		CaptureService:CaptureScreenshot(function(_contentId: string)
+			success = true
+			done = true
+		end)
+	end)
+	if not captureOk then
+		warn("[RunTests] Screenshot failed: " .. tostring(captureErr))
+		sendJson(ws, { type = "screenshot", success = false, name = name })
+		return
+	end
+	-- Wait for the callback (up to 5 seconds)
+	local waited = 0
+	while not done and waited < 5 do
+		task.wait(0.1)
+		waited += 0.1
+	end
+	sendJson(ws, { type = "screenshot", success = success, name = name })
+end
+
 local function runTests(ws: WebSocketClient, filter: string)
 	local testsFolder = script.Parent.Src
 	local testModules = testsFolder:QueryDescendants("ModuleScript")
@@ -132,6 +157,9 @@ local function runTests(ws: WebSocketClient, filter: string)
 			expect = createExpect,
 			fail = function(message: string)
 				error(message, 2)
+			end,
+			screenshot = function(name: string?)
+				takeScreenshot(ws, name)
 			end,
 			plugin = plugin,
 		}

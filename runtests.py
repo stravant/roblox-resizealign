@@ -14,7 +14,10 @@ Requires: pip install websockets
 """
 
 import asyncio
+import glob
 import json
+import os
+import shutil
 import subprocess
 import sys
 
@@ -23,6 +26,10 @@ import websockets.asyncio.server
 
 PORT = 38741
 CONNECT_TIMEOUT = 30
+CAPTURE_DIR = os.path.expandvars(
+    r"%LOCALAPPDATA%\Roblox\tmp-capture-storage"
+)
+WORKSPACE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def build(description: str, args: list[str]):
@@ -114,6 +121,24 @@ async def run_tests(filter_str: str):
                     print(f"  \033[31mFAIL\033[0m  {name}")
                     if error_msg:
                         print(f"        {error_msg}")
+
+            elif msg_type == "screenshot":
+                if msg.get("success"):
+                    # Give a moment for the file to be written
+                    await asyncio.sleep(1)
+                    pattern = os.path.join(CAPTURE_DIR, "**", "*")
+                    files = [f for f in glob.glob(pattern, recursive=True) if os.path.isfile(f)]
+                    if files:
+                        newest = max(files, key=os.path.getmtime)
+                        name = msg.get("name") or "screenshot"
+                        safe_name = name.replace(" ", "_").replace(">", "-")
+                        dest = os.path.join(WORKSPACE_DIR, f"last_screenshot_{safe_name}.png")
+                        shutil.copy2(newest, dest)
+                        print(f"  \033[36mSCREENSHOT\033[0m  {name} -> {dest}")
+                    else:
+                        print(f"  \033[33mSCREENSHOT\033[0m  {msg.get('name', '?')} (no capture file found)")
+                else:
+                    print(f"  \033[33mSCREENSHOT\033[0m  {msg.get('name', '?')} (failed)")
 
             elif msg_type == "done":
                 passed = msg.get("passed", 0)
