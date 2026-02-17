@@ -87,10 +87,10 @@ local function takeScreenshot(ws: WebSocketClient, name: string?)
 	local done = false
 	local success = false
 	local captureOk, captureErr: any = pcall(function()
-		CaptureService:CaptureScreenshot(function(_contentId: string)
-			success = true
+		CaptureService:TakeScreenshotCaptureAsync(function(result, _screenshotCapture)
+			success = result == Enum.ScreenshotCaptureResult.Success
 			done = true
-		end)
+		end, { UICaptureMode = Enum.UICaptureMode.All })
 	end)
 	if not captureOk then
 		warn("[RunTests] Screenshot failed: " .. tostring(captureErr))
