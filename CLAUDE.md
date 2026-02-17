@@ -15,10 +15,14 @@ It outputs a `.rbxmx` plugin file built via Rojo.
 rojo build -p "ResizeAlign V2.0.rbxmx"
 
 # Run tests (*.spec.lua files in the Src folder)
+# Tests can call t.screenshot("name") to capture the viewport (use Read tool to view the output)
+# For UI tests: mount into ScreenGui parented to CoreGui, use ReactRoblox.act to flush rendering
 python runtests.py
 
-# Install dependencies
+# Install dependencies (must fix the Luau types after installing)
 wally install
+rojo sourcemap default.project.json --output sourcemap.json
+wally-package-types --sourcemap sourcemap.json Packages
 ```
 
 Tools are managed via Aftman (`aftman.toml`): Rojo 7.6.1. Dependencies are managed via Wally (`wally.toml`).
