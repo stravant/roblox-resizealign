@@ -256,6 +256,16 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 			}
 		end
 
+		-- If it's a wedge slope face, return directly (edge threshold logic
+		-- would run on the wrong box face and select the opposite side)
+		if isWedgeFace then
+			return {
+				Object = hit,
+				Normal = normalId,
+				IsWedge = true,
+			}
+		end
+
 		local threshold;
 		if activeSettings.SelectionThreshold == "25" then
 			threshold = 0.25
