@@ -139,6 +139,27 @@ local function distanceToOppositeEdge(edge, point: Vector2, direction: Vector2):
 	end
 end
 
+-- Compute barycentric coordinates of point p in triangle (v0, v1, v2).
+-- Returns Vector3(w, u, v) where w is the weight for v0, u for v1, v for v2.
+local function computeBarycentric(p: Vector3, v0: Vector3, v1: Vector3, v2: Vector3): Vector3
+	local e0 = v1 - v0
+	local e1 = v2 - v0
+	local ep = p - v0
+	local d00 = e0:Dot(e0)
+	local d01 = e0:Dot(e1)
+	local d02 = e0:Dot(ep)
+	local d11 = e1:Dot(e1)
+	local d12 = e1:Dot(ep)
+	local denom = d00 * d11 - d01 * d01
+	if math.abs(denom) < 0.0001 then
+		return Vector3.new(1/3, 1/3, 1/3)
+	end
+	local u = (d11 * d02 - d01 * d12) / denom
+	local v = (d00 * d12 - d01 * d02) / denom
+	local w = 1 - u - v
+	return Vector3.new(w, u, v)
+end
+
 local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings.ResizeAlignSettings): ResizeAlignSession
 	local changeSignal = Signal.new()
 
@@ -232,9 +253,29 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 			local rightNormal = cf.YVector * halfSize.X - cf.XVector * halfSize.Y
 			local backNormal = cf.YVector * halfSize.Z + cf.ZVector * halfSize.Y
 			if rightNormal.Magnitude > 0.001 and hitNormal:Dot(rightNormal.Unit) > 0.99 then
-				cornerWedgeSide = "Right"
+				-- Right slope ACE: A=(-hx,-hy,-hz), C=(-hx,-hy,hz), E=(hx,hy,-hz)
+				-- Center zone → slope (extrusion), edge zone → virtual box face (resize)
+				local bary = computeBarycentric(
+					localDisp,
+					Vector3.new(-halfSize.X, -halfSize.Y, -halfSize.Z),
+					Vector3.new(-halfSize.X, -halfSize.Y, halfSize.Z),
+					Vector3.new(halfSize.X, halfSize.Y, -halfSize.Z)
+				)
+				if math.min(bary.X, bary.Y, bary.Z) >= 0.15 then
+					cornerWedgeSide = "Right"
+				end
 			elseif backNormal.Magnitude > 0.001 and hitNormal:Dot(backNormal.Unit) > 0.99 then
-				cornerWedgeSide = "Back"
+				-- Back slope CDE: C=(-hx,-hy,hz), D=(hx,-hy,hz), E=(hx,hy,-hz)
+				-- Center zone → slope (extrusion), edge zone → virtual box face (resize)
+				local bary = computeBarycentric(
+					localDisp,
+					Vector3.new(-halfSize.X, -halfSize.Y, halfSize.Z),
+					Vector3.new(halfSize.X, -halfSize.Y, halfSize.Z),
+					Vector3.new(halfSize.X, halfSize.Y, -halfSize.Z)
+				)
+				if math.min(bary.X, bary.Y, bary.Z) >= 0.15 then
+					cornerWedgeSide = "Back"
+				end
 			end
 		end
 

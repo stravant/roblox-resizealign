@@ -119,9 +119,6 @@ local function isExtrusionFace(face: Face): boolean
 	if face.IsWedge or face.CornerWedgeSide then
 		return true
 	end
-	if isCornerWedgeShape(face.Object) then
-		return true
-	end
 	return false
 end
 
@@ -229,49 +226,6 @@ local function resizePart(face: Face, delta: number)
 		part.Size = Vector3.new(size.X, delta, math.sqrt(size.Y^2 + size.Z^2))
 		part.Parent = face.Object.Parent
 		part.Name = face.Object.Name.."_Extended"
-	elseif isCornerWedgeShape(face.Object) and (face.Normal == Enum.NormalId.Front or face.Normal == Enum.NormalId.Right) then
-		-- Triangle flat faces of CornerWedge: extrude WedgePart to preserve slopes
-		if math.abs(delta) < 0.001 then
-			return
-		end
-		local cf = face.Object.CFrame
-		local hsize = face.Object.Size / 2
-		local wedge = Instance.new("WedgePart")
-		copyPartProps(face.Object, wedge)
-		if face.Normal == Enum.NormalId.Front then
-			-- Front triangle ABE, right angle at B. Slope matches CornerWedge right slope.
-			wedge.Size = Vector3.new(delta, 2 * hsize.Y, 2 * hsize.X)
-			wedge.CFrame = CFrame.fromMatrix(
-				cf.Position - cf.ZVector * (hsize.Z + delta / 2),
-				-cf.ZVector,
-				cf.YVector
-			)
-		else
-			-- Right triangle BDE, right angle at B. Slope matches CornerWedge back slope.
-			wedge.Size = Vector3.new(delta, 2 * hsize.Y, 2 * hsize.Z)
-			wedge.CFrame = CFrame.fromMatrix(
-				cf.Position + cf.XVector * (hsize.X + delta / 2),
-				-cf.XVector,
-				cf.YVector
-			)
-		end
-		wedge.Parent = face.Object.Parent
-		wedge.Name = face.Object.Name .. "_Extended"
-	elseif isExtrusionFace(face) then
-		-- Rectangle flat faces of CornerWedge/WedgePart: extrude box Part to preserve slopes
-		if math.abs(delta) < 0.001 then
-			return
-		end
-		local cf = face.Object.CFrame
-		local faceDir = Vector3.fromNormalId(face.Normal)
-		local sizeDir = Vector3.new(math.abs(faceDir.X), math.abs(faceDir.Y), math.abs(faceDir.Z))
-		local halfAlongNormal = sizeDir:Dot(face.Object.Size) / 2
-		local part = Instance.new("Part")
-		copyPartProps(face.Object, part)
-		part.Size = face.Object.Size * (Vector3.one - sizeDir) + sizeDir * delta
-		part.CFrame = cf * CFrame.new(faceDir * (halfAlongNormal + delta / 2))
-		part.Parent = face.Object.Parent
-		part.Name = face.Object.Name .. "_Extended"
 	else
 		local joiner = JointMaker.new(false)
 		joiner:pickUpParts({face.Object})

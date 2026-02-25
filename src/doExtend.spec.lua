@@ -938,7 +938,7 @@ return function(t: TestContext)
 	-- CornerWedge flat triangular face extrusion
 	--------------------------------------------------------------------------------
 
-	t.test("CornerWedge: Front face extrusion creates a WedgePart", function()
+	t.test("CornerWedge: Front face resizes the part directly", function()
 		local cornerWedge = Instance.new("CornerWedgePart")
 		cornerWedge.Size = Vector3.new(4, 4, 4)
 		cornerWedge.CFrame = CFrame.new(0, 0, 0)
@@ -955,26 +955,14 @@ return function(t: TestContext)
 
 		doExtend(faceA, faceB, "OuterTouch")
 
-		-- Find the created WedgePart
-		local createdWedge = nil
-		for _, child in workspace:GetChildren() do
-			if child:IsA("WedgePart") and child.Name:find("_Extended") then
-				createdWedge = child
-				break
-			end
-		end
-		t.expect(createdWedge ~= nil).toBe(true)
-		if createdWedge then
-			t.expect(createdWedge.Size.X > 0.001).toBe(true)
-			t.expect(createdWedge.Size.Y > 0.001).toBe(true)
-			t.expect(createdWedge.Size.Z > 0.001).toBe(true)
-		end
+		-- CornerWedge should have been resized directly (Z size increased)
+		t.expect(cornerWedge.Size.Z > 4).toBe(true)
 
 		cornerWedge:Destroy()
 		cleanup(partB)
 	end)
 
-	t.test("CornerWedge: Right face extrusion creates a WedgePart", function()
+	t.test("CornerWedge: Right face resizes the part directly", function()
 		local cornerWedge = Instance.new("CornerWedgePart")
 		cornerWedge.Size = Vector3.new(4, 4, 4)
 		cornerWedge.CFrame = CFrame.new(0, 0, 0)
@@ -991,20 +979,14 @@ return function(t: TestContext)
 
 		doExtend(faceA, faceB, "OuterTouch")
 
-		local createdWedge = nil
-		for _, child in workspace:GetChildren() do
-			if child:IsA("WedgePart") and child.Name:find("_Extended") then
-				createdWedge = child
-				break
-			end
-		end
-		t.expect(createdWedge ~= nil).toBe(true)
+		-- CornerWedge should have been resized directly (X size increased)
+		t.expect(cornerWedge.Size.X > 4).toBe(true)
 
 		cornerWedge:Destroy()
 		cleanup(partB)
 	end)
 
-	t.test("CornerWedge: Bottom face extrusion creates a box Part", function()
+	t.test("CornerWedge: Bottom face resizes the part directly", function()
 		local cornerWedge = Instance.new("CornerWedgePart")
 		cornerWedge.Size = Vector3.new(4, 4, 4)
 		cornerWedge.CFrame = CFrame.new(0, 3, 0)
@@ -1020,15 +1002,8 @@ return function(t: TestContext)
 
 		doExtend(faceA, faceB, "OuterTouch")
 
-		-- Should create an _Extended Part (box, not wedge) for rectangular face
-		local createdPart = nil
-		for _, child in workspace:GetChildren() do
-			if child.Name:find("_Extended") and child:IsA("Part") then
-				createdPart = child
-				break
-			end
-		end
-		t.expect(createdPart ~= nil).toBe(true)
+		-- CornerWedge should have been resized directly (Y size increased)
+		t.expect(cornerWedge.Size.Y > 4).toBe(true)
 
 		cornerWedge:Destroy()
 		cleanup(partB)
