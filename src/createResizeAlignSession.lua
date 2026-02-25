@@ -229,6 +229,7 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 
 		local isWedgeFace = false
 		local cornerWedgeSide = nil
+		local isCornerWedgeSlope = false
 		local isWedge = ShapeUtils.isWedgeShape(hit)
 		local isCornerWedge = ShapeUtils.isCornerWedgeShape(hit)
 		local hitNormal = result.Normal
@@ -255,6 +256,7 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 			if rightNormal.Magnitude > 0.001 and hitNormal:Dot(rightNormal.Unit) > 0.99 then
 				-- Right slope ACE: A=(-hx,-hy,-hz), C=(-hx,-hy,hz), E=(hx,hy,-hz)
 				-- Center zone → slope (extrusion), edge zone → virtual box face (resize)
+				isCornerWedgeSlope = true
 				local bary = computeBarycentric(
 					localDisp,
 					Vector3.new(-halfSize.X, -halfSize.Y, -halfSize.Z),
@@ -267,6 +269,7 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 			elseif backNormal.Magnitude > 0.001 and hitNormal:Dot(backNormal.Unit) > 0.99 then
 				-- Back slope CDE: C=(-hx,-hy,hz), D=(hx,-hy,hz), E=(hx,hy,-hz)
 				-- Center zone → slope (extrusion), edge zone → virtual box face (resize)
+				isCornerWedgeSlope = true
 				local bary = computeBarycentric(
 					localDisp,
 					Vector3.new(-halfSize.X, -halfSize.Y, halfSize.Z),
@@ -279,21 +282,30 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 			end
 		end
 
-		return hit, at, targetSurface, isWedgeFace, cornerWedgeSide
+		return hit, at, targetSurface, isWedgeFace, cornerWedgeSide, isCornerWedgeSlope
 	end
 
 	local function getTarget(): Face?
-		local hit, _at, normalId, isWedgeFace, cornerWedgeSide = simpleGetTarget()
+		local hit, _at, normalId, isWedgeFace, cornerWedgeSide, isCornerWedgeSlope = simpleGetTarget()
 		if not hit then
 			return nil
 		end
 
-		-- If it's a corner wedge slope, return directly (no edge threshold logic)
+		-- If it's a corner wedge slope, return directly (no edge threshold logic).
+		-- Both center zone (cornerWedgeSide set) and edge zone (virtual face)
+		-- must skip edge threshold — the closest-box-face normalId on a slope
+		-- surface can be on the opposite side of the part.
 		if cornerWedgeSide then
 			return {
 				Object = hit,
 				Normal = normalId,
 				CornerWedgeSide = cornerWedgeSide,
+			}
+		end
+		if isCornerWedgeSlope then
+			return {
+				Object = hit,
+				Normal = normalId,
 			}
 		end
 
