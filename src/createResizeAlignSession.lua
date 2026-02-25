@@ -215,12 +215,12 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 		if isWedge then
 			local slopeNormal = cf.YVector * halfSize.Z - cf.ZVector * halfSize.Y
 			if slopeNormal.Magnitude > 0.001 and hitNormal:Dot(slopeNormal.Unit) > 0.99 then
-				-- Divide slope into thirds: end thirds → virtual box faces, middle → slope
+				-- Divide slope 30-40-30: end portions → virtual box faces, middle → slope
 				local t = (halfSize.Y - localDisp.Y) / (2 * halfSize.Y)
-				if t < 1/3 then
+				if t < 0.3 then
 					-- Near top-back edge → virtual Top face
 					targetSurface = Enum.NormalId.Top
-				elseif t > 2/3 then
+				elseif t > 0.7 then
 					-- Near bottom-front edge → virtual Front face
 					targetSurface = Enum.NormalId.Front
 				else
