@@ -1259,6 +1259,42 @@ return function(t: TestContext)
 		cleanup(partB)
 	end)
 
+	t.test("ExtendUpTo: WedgePart flat face extends to parallel same-direction target", function()
+		-- When face A and face B normals point the same direction (e.g. both Back faces),
+		-- the parallel path must apply the sign correction for extrusion faces.
+		local wedge = Instance.new("WedgePart")
+		wedge.Size = Vector3.new(4, 4, 4)
+		wedge.CFrame = CFrame.new(0, 0, 0)
+		wedge.Anchored = true
+		wedge.Parent = workspace
+
+		-- Part B behind the wedge, with its Back face (same direction as wedge's Back face)
+		local partB = makePart(CFrame.new(0, 0, 6), Vector3.new(4, 4, 2))
+		local faceA: doExtend.Face = {
+			Object = wedge,
+			Normal = Enum.NormalId.Back,
+		}
+		local faceB = makeFace(partB, Enum.NormalId.Back)
+
+		doExtend(faceA, faceB, "ExtendUpTo")
+
+		-- An extrusion part should have been created from the back face
+		local found = false
+		for _, child in workspace:GetChildren() do
+			if child.Name:find("_Extended") then
+				found = true
+				t.expect(child.Size.X > 0.001).toBe(true)
+				t.expect(child.Size.Y > 0.001).toBe(true)
+				t.expect(child.Size.Z > 0.001).toBe(true)
+				break
+			end
+		end
+		t.expect(found).toBe(true)
+
+		wedge:Destroy()
+		cleanup(partB)
+	end)
+
 	--------------------------------------------------------------------------------
 	-- Extrusion face properties
 	--------------------------------------------------------------------------------

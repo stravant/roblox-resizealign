@@ -415,6 +415,9 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 	if isParallel then
 		local lenA = (extendPointA - extendPointB):Dot(getNormal(faceB))
 		if isExtrusionFace(faceA) then
+			if getNormal(faceA):Dot(getNormal(faceB)) > 0 then
+				lenA = -lenA
+			end
 			if lenA < 0 then
 				return
 			end
