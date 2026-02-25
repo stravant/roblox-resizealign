@@ -455,7 +455,7 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 
 	if resizeMode == "ExtendInto" or resizeMode == "ExtendUpTo" then
 		local denom2 = dirA:Dot(dirB)
-		if math.abs(denom2) > 0.0001 then
+		if math.abs(denom2) > 0.0001 and not isExtrusionFace(faceA) then
 			lenA = - (extendPointA - extendPointB):Dot(dirB) / denom2
 			lenB = 0
 		else
