@@ -122,9 +122,6 @@ local function isExtrusionFace(face: Face): boolean
 	if isCornerWedgeShape(face.Object) then
 		return true
 	end
-	if isWedgeShape(face.Object) and face.Normal ~= Enum.NormalId.Left and face.Normal ~= Enum.NormalId.Right then
-		return true
-	end
 	return false
 end
 

@@ -909,8 +909,9 @@ return function(t: TestContext)
 		end
 	end)
 
-	t.test("WedgePart rectangular face extrusion creates box part", function()
-		-- Bottom face of a WedgePart is rectangular but requires extrusion
+	t.test("WedgePart rectangular face resizes the wedge directly", function()
+		-- Bottom face of a WedgePart is rectangular and should resize the wedge
+		-- itself (not create a separate extrusion part)
 		local wedge = Instance.new("WedgePart")
 		wedge.Size = Vector3.new(4, 4, 4)
 		wedge.CFrame = CFrame.new(0, 3, 0)
@@ -926,15 +927,9 @@ return function(t: TestContext)
 
 		doExtend(faceA, faceB, "OuterTouch")
 
-		-- Should create an _Extended part for the rectangular face extrusion
-		local found = false
-		for _, child in workspace:GetChildren() do
-			if child.Name:find("_Extended") then
-				found = true
-				break
-			end
-		end
-		-- May or may not create an extension depending on geometry; just don't error
+		-- Wedge should have been resized directly (Y size increased)
+		t.expect(wedge.Size.Y > 4).toBe(true)
+
 		wedge:Destroy()
 		cleanup(partB)
 	end)
@@ -1219,18 +1214,16 @@ return function(t: TestContext)
 	--------------------------------------------------------------------------------
 
 	t.test("ExtendUpTo: WedgePart flat face extends to angled target", function()
-		-- WedgePart with Back face (a flat rectangular extrusion face) should be able
-		-- to ExtendUpTo an angled target. The target is ahead of the back face and
-		-- tilted 45 degrees, so the closest point of Part B is at roughly Z=2.9
-		-- while the back face is at Z=2. An extrusion of ~0.9 units should be created.
+		-- WedgePart with Back face should be able to ExtendUpTo an angled target
+		-- by resizing the wedge itself (not creating a separate extrusion part).
 		local wedge = Instance.new("WedgePart")
-		wedge.Size = Vector3.new(4, 4, 4)
+		wedge.Size = Vector3.new(4, 2, 4)
 		wedge.CFrame = CFrame.new(0, 0, 0)
 		wedge.Anchored = true
 		wedge.Parent = workspace
 
 		local partB = makePart(
-			CFrame.new(0, 3, 5) * CFrame.Angles(math.rad(45), 0, 0),
+			CFrame.new(0, 2, 6) * CFrame.Angles(math.rad(30), 0, 0),
 			Vector3.new(4, 4, 2)
 		)
 		local faceA: doExtend.Face = {
@@ -1241,19 +1234,8 @@ return function(t: TestContext)
 
 		doExtend(faceA, faceB, "ExtendUpTo")
 
-		-- An extrusion part should have been created from the back face
-		local found = false
-		for _, child in workspace:GetChildren() do
-			if child.Name:find("_Extended") then
-				found = true
-				-- The extrusion should have non-degenerate size
-				t.expect(child.Size.X > 0.001).toBe(true)
-				t.expect(child.Size.Y > 0.001).toBe(true)
-				t.expect(child.Size.Z > 0.001).toBe(true)
-				break
-			end
-		end
-		t.expect(found).toBe(true)
+		-- The wedge itself should have been resized (Z increased)
+		t.expect(wedge.Size.Z > 4).toBe(true)
 
 		wedge:Destroy()
 		cleanup(partB)
@@ -1261,7 +1243,7 @@ return function(t: TestContext)
 
 	t.test("ExtendUpTo: WedgePart flat face extends to parallel same-direction target", function()
 		-- When face A and face B normals point the same direction (e.g. both Back faces),
-		-- the parallel path must apply the sign correction for extrusion faces.
+		-- the wedge itself should resize.
 		local wedge = Instance.new("WedgePart")
 		wedge.Size = Vector3.new(4, 4, 4)
 		wedge.CFrame = CFrame.new(0, 0, 0)
@@ -1278,18 +1260,8 @@ return function(t: TestContext)
 
 		doExtend(faceA, faceB, "ExtendUpTo")
 
-		-- An extrusion part should have been created from the back face
-		local found = false
-		for _, child in workspace:GetChildren() do
-			if child.Name:find("_Extended") then
-				found = true
-				t.expect(child.Size.X > 0.001).toBe(true)
-				t.expect(child.Size.Y > 0.001).toBe(true)
-				t.expect(child.Size.Z > 0.001).toBe(true)
-				break
-			end
-		end
-		t.expect(found).toBe(true)
+		-- The wedge itself should have been resized (Z increased)
+		t.expect(wedge.Size.Z > 4).toBe(true)
 
 		wedge:Destroy()
 		cleanup(partB)
