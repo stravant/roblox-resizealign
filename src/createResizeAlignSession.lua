@@ -255,7 +255,7 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 			local backNormal = cf.YVector * halfSize.Z + cf.ZVector * halfSize.Y
 			if rightNormal.Magnitude > 0.001 and hitNormal:Dot(rightNormal.Unit) > 0.99 then
 				-- Right slope ACE: A=(-hx,-hy,-hz), C=(-hx,-hy,hz), E=(hx,hy,-hz)
-				-- Center zone → slope (extrusion), edge zone → virtual box face (resize)
+				-- bary = (wA, uC, vE). vE smallest = near edge AC (bottom), etc.
 				isCornerWedgeSlope = true
 				local bary = computeBarycentric(
 					localDisp,
@@ -265,10 +265,14 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 				)
 				if math.min(bary.X, bary.Y, bary.Z) >= 0.15 then
 					cornerWedgeSide = "Right"
+				elseif bary.Z <= bary.X and bary.Z <= bary.Y then
+					-- Near edge AC (opposite E): virtual Left face
+					-- (closest-box-face can pick Bottom instead of Left here)
+					targetSurface = Enum.NormalId.Left
 				end
 			elseif backNormal.Magnitude > 0.001 and hitNormal:Dot(backNormal.Unit) > 0.99 then
 				-- Back slope CDE: C=(-hx,-hy,hz), D=(hx,-hy,hz), E=(hx,hy,-hz)
-				-- Center zone → slope (extrusion), edge zone → virtual box face (resize)
+				-- bary = (wC, uD, vE). vE smallest = near edge CD (bottom), etc.
 				isCornerWedgeSlope = true
 				local bary = computeBarycentric(
 					localDisp,
@@ -278,6 +282,10 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 				)
 				if math.min(bary.X, bary.Y, bary.Z) >= 0.15 then
 					cornerWedgeSide = "Back"
+				elseif bary.Z <= bary.X and bary.Z <= bary.Y then
+					-- Near edge CD (opposite E): virtual Back face
+					-- (closest-box-face can pick Bottom instead of Back here)
+					targetSurface = Enum.NormalId.Back
 				end
 			end
 		end
