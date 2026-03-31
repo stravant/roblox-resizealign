@@ -332,7 +332,7 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 
 	local a, b, c = dirA:Dot(dirA), dirA:Dot(dirB), dirB:Dot(dirB)
 	local denom = a*c - b*b
-	local isParallel = math.abs(denom) < 0.001
+	local isParallel = math.abs(denom) < 0.0001
 
 	local extendPointA, extendPointB;
 	if resizeMode == "ExtendInto" or resizeMode == "OuterTouch" or resizeMode == "WedgeJoin" or resizeMode == "ButtJoint" or (isParallel and resizeMode == "RoundedJoin") then
