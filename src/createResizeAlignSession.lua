@@ -180,6 +180,8 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 		local ray = camera:ScreenPointToRay(mouseLocation.X, mouseLocation.Y)
 		local raycastParams = RaycastParams.new()
 		raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+		raycastParams.BruteForceAllSlow = true
+		raycastParams.CollisionGroup = "StudioSelectable"
 		local ignoreList = {}
 		if mState == "FaceB" and mFaceA then
 			table.insert(ignoreList, mFaceA.Object)
