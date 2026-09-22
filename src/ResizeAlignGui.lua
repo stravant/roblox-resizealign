@@ -14,6 +14,7 @@ local OperationButton = require("./PluginGui/OperationButton")
 local ChipForToggle = require("./PluginGui/ChipForToggle")
 local Checkbox = require("./PluginGui/Checkbox")
 local Settings = require("./Settings")
+local NumberInput = require("./PluginGui/NumberInput")
 local ModeDemo = require("./ModeDemo")
 local PluginGuiTypes = require("./PluginGui/Types")
 local FaceHighlight = require("./FaceHighlight")
@@ -31,47 +32,319 @@ local function createNextOrder()
 	end
 end
 
+local function ModeButton(props: {
+	Text: string,
+	IsCurrent: boolean,
+	PreviewMode: ModeDemo.PreviewMode,
+	HelpText: string,
+	OpenBelow: boolean?,
+	LayoutOrder: number?,
+	OnClick: () -> (),
+})
+	local HEIGHT = 28
+	local openBelow = props.OpenBelow or false
+	return e(HelpGui.WithHelpIcon, {
+		LayoutOrder = props.LayoutOrder,
+		Subject = e("Frame", {
+			ZIndex = 2,
+			Size = UDim2.new(1, 0, 0, HEIGHT),
+			BackgroundTransparency = 1,
+		}, {
+			Layout = e("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, 0),
+			}),
+			Corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
+			Border = props.IsCurrent and not openBelow and e("UIStroke", {
+				Color = Colors.WHITE,
+				Thickness = 2,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			}),
+			Button = e(ChipForToggle, {
+				Text = props.Text,
+				IsCurrent = props.IsCurrent,
+				JoinedRight = true,
+				OpenBelow = openBelow,
+				HideOutline = true,
+				Height = HEIGHT,
+				TextSize = 24,
+				LayoutOrder = 1,
+				OnClick = props.OnClick,
+			}),
+			Demo = e(ModeDemo, {
+				PreviewMode = props.PreviewMode,
+				JoinedLeft = true,
+				OpenBelow = openBelow,
+				Animate = props.IsCurrent,
+				Size = UDim2.fromOffset(60, HEIGHT),
+				LayoutOrder = 2,
+			}),
+		}),
+		Help = e(HelpGui.BasicTooltip, {
+			HelpRichText = props.HelpText,
+		}),
+	})
+end
+
+local function ExpandableModeButton(props: {
+	ButtonComponent: any,
+	ButtonProps: any,
+	ExpandedContent: any,
+	OptionsName: string,
+	ContentInset: number?,
+	LayoutOrder: number?,
+})
+	local expandedContent = props.ExpandedContent
+	local contentInset = props.ContentInset or 0
+
+	return e("Frame", {
+		ZIndex = 2,
+		Size = UDim2.fromScale(1, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		LayoutOrder = props.LayoutOrder,
+	}, {
+		OrderedContent = e("Frame", {
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+		}, {
+			Layout = e("UIListLayout", {
+				SortOrder = Enum.SortOrder.LayoutOrder,
+			}),
+			Header = e("Frame", {
+				Size = UDim2.fromScale(1, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundTransparency = 1,
+				LayoutOrder = 1,
+			}, {
+				Content = e(props.ButtonComponent, props.ButtonProps),
+			}),
+			Options = expandedContent and e("Frame", {
+				Size = UDim2.fromScale(1, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundTransparency = 1,
+				LayoutOrder = 2,
+			}, {
+				Panel = e("Frame", {
+					Name = props.OptionsName,
+					Position = UDim2.fromOffset(contentInset, 0),
+					Size = UDim2.new(1, -contentInset, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+					BorderSizePixel = 0,
+				}, {
+					Corner = e("UICorner", {
+						TopLeftRadius = UDim.new(),
+						TopRightRadius = UDim.new(),
+						BottomLeftRadius = UDim.new(0, 2),
+						BottomRightRadius = UDim.new(0, 2),
+					}),
+					Content = e("Frame", {
+						Size = UDim2.fromScale(1, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						BackgroundTransparency = 1,
+					}, {
+						Layout = e("UIListLayout", {
+							SortOrder = Enum.SortOrder.LayoutOrder,
+							Padding = UDim.new(0, 6),
+						}),
+						PaddingInset = e("UIPadding", {
+							PaddingTop = UDim.new(0, 6),
+							PaddingBottom = UDim.new(0, 7),
+							PaddingLeft = UDim.new(0, 8),
+							PaddingRight = UDim.new(0, 8),
+						}),
+						Options = expandedContent,
+					}),
+				}),
+			}),
+		}),
+		Outline = expandedContent and e("Frame", {
+			ZIndex = 4,
+			Position = UDim2.fromOffset(contentInset, 0),
+			Size = UDim2.new(1, -contentInset, 1, 0),
+			BackgroundTransparency = 1,
+		}, {
+			Corner = e("UICorner", {
+				CornerRadius = UDim.new(0, 4),
+			}),
+			Stroke = e("UIStroke", {
+				Color = Colors.WHITE,
+				Thickness = 2,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				BorderStrokePosition = Enum.BorderStrokePosition.Center,
+			}),
+		}),
+	})
+end
+
+local function OptionEntry(props: {
+	Content: React.ReactElement<any, any>,
+	HelpText: string,
+	LayoutOrder: number?,
+})
+	return e(HelpGui.WithHelpIcon, {
+		LayoutOrder = props.LayoutOrder,
+		Subject = props.Content,
+		Help = e(HelpGui.BasicTooltip, {
+			HelpRichText = props.HelpText,
+		}),
+	})
+end
+
+local function SplineJoinOptions(props: {
+	Settings: Settings.ResizeAlignSettings,
+	UpdatedSettings: () -> (),
+})
+	return React.createElement(React.Fragment, nil, {
+		Segments = e(OptionEntry, {
+			LayoutOrder = 2,
+			HelpText = "Number of clones making up the spline. More segments produce a smoother curve. Leave empty or enter \"automatic\" to choose the count from the spline length and curvature.",
+			Content = e(NumberInput, {
+				Label = "Segments",
+				Value = props.Settings.SplineJoinSegments,
+				ZeroLabel = "Automatic",
+				TextBoxWidth = UDim.new(0.5, -3),
+				ValueEntered = function(value: number): number
+					if value % 1 == 0 and value >= 0 then
+						props.Settings.SplineJoinSegments = value
+						props.UpdatedSettings()
+					end
+					return props.Settings.SplineJoinSegments
+				end,
+			}),
+		}),
+	})
+end
+
+local function OuterTouchOptions(props: {
+	Settings: Settings.ResizeAlignSettings,
+	UpdatedSettings: () -> (),
+})
+	return React.createElement(React.Fragment, nil, {
+		AcuteWedgeJoin = e(OptionEntry, {
+			HelpText = "Automatically use Wedge Join instead of Outer Touch when the angle between faces is small to allow the formation of a sharp point for tight corners.",
+			Content = e(Checkbox, {
+				Label = "Wedge Join if needed",
+				Checked = props.Settings.AcuteWedgeJoin,
+				Changed = function(value: boolean)
+					props.Settings.AcuteWedgeJoin = value
+					props.UpdatedSettings()
+				end,
+			}),
+		}),
+	})
+end
+
+local function RoundedJoinOptions(props: {
+	Settings: Settings.ResizeAlignSettings,
+	UpdatedSettings: () -> (),
+})
+	local useCylinder = props.Settings.UseCylinderForRoundedJoin
+	local function fillerChip(text: string, cylinder: boolean, layoutOrder: number)
+		return e(ChipForToggle, {
+			Text = text,
+			IsCurrent = useCylinder == cylinder,
+			LayoutOrder = layoutOrder,
+			OnClick = function()
+				props.Settings.UseCylinderForRoundedJoin = cylinder
+				props.UpdatedSettings()
+			end,
+		})
+	end
+	return React.createElement(React.Fragment, nil, {
+		Radius = e(OptionEntry, {
+			LayoutOrder = 1,
+			HelpText = "Radius of the rounded outside of the join. A larger radius makes a wider Cylinder, moved inwards to stay flush with the outside of both parts, or a more gradual Spline bend. Leave empty or enter \"automatic\" to use the radius the joined faces need, which is also the smallest radius that can be used. Joining two cylinders ignores this.",
+			Content = e(NumberInput, {
+				Label = "Radius",
+				Value = props.Settings.RoundedJoinRadius,
+				ZeroLabel = "Automatic",
+				Unit = " studs",
+				TextBoxWidth = UDim.new(0.5, -3),
+				ValueEntered = function(value: number): number
+					if value >= 0 and value <= 1024 then
+						props.Settings.RoundedJoinRadius = value
+						props.UpdatedSettings()
+					end
+					return props.Settings.RoundedJoinRadius
+				end,
+			}),
+		}),
+		FillerType = e(OptionEntry, {
+			LayoutOrder = 2,
+			HelpText = "What to fill the gap between the parts with.\n"
+				.. "<b>•Cylinder</b> — A single Cylinder part.\n"
+				.. "<b>•Spline</b> — A Spline Join made of copies of the first part, which keeps the shape of non-block parts.\n"
+				.. "Joining two cylinders always uses a sphere.",
+			Content = e("Frame", {
+				Size = UDim2.fromScale(1, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundTransparency = 1,
+			}, {
+				ListLayout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 4),
+				}),
+				Cylinder = fillerChip("Cylinder", true, 1),
+				Spline = fillerChip("Spline", false, 2),
+			}),
+		}),
+	})
+end
+
 local function ResizeMethodPanel(props: {
 	Settings: Settings.ResizeAlignSettings,
 	UpdatedSettings: () -> (),
 	LayoutOrder: number?,
 })
 	local current = props.Settings.ResizeMode
-
 	local function makeButton(text: string, mode: Settings.ResizeMode, helpText: string, layoutOrder: number)
-		local HEIGHT = 28
-		return e(HelpGui.WithHelpIcon, {
+		return e(ModeButton, {
+			Text = text,
+			IsCurrent = current == mode,
+			PreviewMode = if mode == "RoundedJoin" and props.Settings.UseCylinderForRoundedJoin
+				then "RoundedJoinCylinder"
+				else mode,
+			HelpText = helpText,
 			LayoutOrder = layoutOrder,
-			Subject = e("Frame", {
-				Size = UDim2.new(1, 0, 0, HEIGHT),
-				BackgroundTransparency = 1,
-			}, {
-				Layout = e("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 4),
-				}),
-				Button = e(ChipForToggle, {
-					Text = text,
-					IsCurrent = current == mode,
-					Height = HEIGHT,
-					TextSize = 24,
-					LayoutOrder = 1,
-					OnClick = function()
-						props.Settings.ResizeMode = mode
-						props.UpdatedSettings()
-					end,
-				}),
-				Demo = e(ModeDemo, {
-					ResizeMode = mode,
-					Animate = current == mode,
-					Size = UDim2.fromOffset(60, HEIGHT),
-					LayoutOrder = 2,
-				}),
-			}),
-			Help = e(HelpGui.BasicTooltip, {
-				HelpRichText = helpText,
-			}),
+			OnClick = function()
+				props.Settings.ResizeMode = mode
+				props.UpdatedSettings()
+			end,
+		})
+	end
+
+	local function makeExpandableButton(
+		text: string,
+		mode: Settings.ResizeMode,
+		helpText: string,
+		layoutOrder: number,
+		expandedContent: any
+	)
+		local isCurrent = current == mode
+		return e(ExpandableModeButton, {
+			ButtonComponent = ModeButton,
+			ButtonProps = {
+				Text = text,
+				IsCurrent = isCurrent,
+				PreviewMode = if mode == "RoundedJoin" and props.Settings.UseCylinderForRoundedJoin
+					then "RoundedJoinCylinder"
+					else mode,
+				HelpText = helpText,
+				OpenBelow = isCurrent,
+				OnClick = function()
+					props.Settings.ResizeMode = mode
+					props.UpdatedSettings()
+				end,
+			},
+			LayoutOrder = layoutOrder,
+			OptionsName = mode .. "Options",
+			ContentInset = if props.Settings.HaveHelp then 20 else 0,
+			ExpandedContent = if isCurrent then expandedContent else nil,
 		})
 	end
 
@@ -80,35 +353,66 @@ local function ResizeMethodPanel(props: {
 		LayoutOrder = props.LayoutOrder,
 		Padding = UDim.new(0, 4),
 	}, {
-		OuterTouch = makeButton("Outer Touch", "OuterTouch",
-			"Extend both parts until their faces align at the outermost points. Good for sealing up non-right-angle joints.", 1),
-		InnerTouch = makeButton("Inner Touch", "InnerTouch",
-			"Extend both parts until their faces align at the innermost points.", 3),
-		WedgeJoin = makeButton("Wedge Join", "WedgeJoin",
-			"Extend to inner touch and fill the remaining gap with wedge parts to form a sharp point. This mode always avoids Z-fighting.", 4),
-		RoundedJoin = makeButton("Rounded Join", "RoundedJoin",
-			"Both parts meet at the middle and any exposed gap is filled with a sphere or cylinder. Works best on faces which are the same size.", 5),
-		ButtJoint = makeButton("Butt Joint", "ButtJoint",
-			"The first face butts up against the side of the second, with no overlap. Only works for right-angle intersections.", 6),
-		ExtendUpTo = makeButton("Extend Up To", "ExtendUpTo",
-			"Only the first face is extended out until it just touches the second face.", 7),
-		ExtendInto = makeButton("Extend Into", "ExtendInto",
-			"Only the first face is extended out until it fully penetrates the second face.", 8),
-		AcuteWedgeJoin = current == "OuterTouch" and e(HelpGui.WithHelpIcon, {
-			LayoutOrder = 9,
-			Subject = e(Checkbox, {
-				Label = "Wedge Join tight corners",
-				Checked = props.Settings.AcuteWedgeJoin,
-				LayoutOrder = 9,
-				Changed = function(newValue: boolean)
-					props.Settings.AcuteWedgeJoin = newValue
-					props.UpdatedSettings()
-				end,
-			}),
-			Help = e(HelpGui.BasicTooltip, {
-				HelpRichText = "Automatically use Wedge Join instead of Outer Touch when the angle between faces is small to allow the formation of a sharp point for tight corners.",
-			}),
-		})
+		OuterTouch = makeExpandableButton(
+			"Outer Touch",
+			"OuterTouch",
+			"Extend both parts until their faces align at the outermost points. Good for sealing up non-right-angle joints.",
+			1,
+			e(OuterTouchOptions, {
+				Settings = props.Settings,
+				UpdatedSettings = props.UpdatedSettings,
+			})
+		),
+		InnerTouch = makeButton(
+			"Inner Touch",
+			"InnerTouch",
+			"Extend both parts until their faces align at the innermost points.",
+			3
+		),
+		WedgeJoin = makeButton(
+			"Wedge Join",
+			"WedgeJoin",
+			"Extend to inner touch and fill the remaining gap with wedge parts to form a sharp point. This mode always avoids Z-fighting.",
+			4
+		),
+		RoundedJoin = makeExpandableButton(
+			"Rounded Join",
+			"RoundedJoin",
+			"Both parts meet at the middle and any exposed gap is filled with a sphere or cylinder, or with a Spline Join. Works best on faces which are the same size.",
+			5,
+			e(RoundedJoinOptions, {
+				Settings = props.Settings,
+				UpdatedSettings = props.UpdatedSettings,
+			})
+		),
+		SplineJoin = makeExpandableButton(
+			"Spline Join",
+			"SplineJoin",
+			"Connect the selected faces with clones of the first part along a spline that matches both face orientations.",
+			7,
+			e(SplineJoinOptions, {
+				Settings = props.Settings,
+				UpdatedSettings = props.UpdatedSettings,
+			})
+		),
+		ButtJoint = makeButton(
+			"Butt Joint",
+			"ButtJoint",
+			"The first face butts up against the side of the second, with no overlap. Only works for right-angle intersections.",
+			9
+		),
+		ExtendUpTo = makeButton(
+			"Extend Up To",
+			"ExtendUpTo",
+			"Only the first face is extended out until it just touches the second face.",
+			10
+		),
+		ExtendInto = makeButton(
+			"Extend Into",
+			"ExtendInto",
+			"Only the first face is extended out until it fully penetrates the second face.",
+			11
+		),
 	})
 end
 
@@ -164,15 +468,20 @@ local function SelectionBehaviorPanel(props: {
 				}),
 			}),
 			Help = e(HelpGui.BasicTooltip, {
-				HelpRichText =
-					"How much margin near an edge should \"Reach Around\" for the back face to allow selection without camera movement.\n" ..
-					"<b>•25%</b> — A large threshold; easier to select backfaces.\n" ..
-					"<b>•15%</b> — Same behavior but with a smaller threshold.\n" ..
-					"<b>•Exact</b> — Only the directly hovered face is selected; More precision.",
+				HelpRichText = 'How much margin near an edge should "Reach Around" for the back face to allow selection without camera movement.\n'
+					.. "<b>•25%</b> — A large threshold; easier to select backfaces.\n"
+					.. "<b>•15%</b> — Same behavior but with a smaller threshold.\n"
+					.. "<b>•Exact</b> — Only the directly hovered face is selected; More precision.",
 			}),
 		}),
 	})
 end
+
+local MODES_WITHOUT_CLASSIC_UI: { [Settings.ResizeMode]: boolean } = {
+	WedgeJoin = true,
+	RoundedJoin = true,
+	SplineJoin = true,
+}
 
 local function OptionsPanel(props: {
 	Settings: Settings.ResizeAlignSettings,
@@ -238,10 +547,7 @@ local function IconOperationButton(props: {
 	LayoutOrder: number?,
 	OnClick: () -> (),
 })
-	local fullText = string.format(
-		'%s\n<i><font size="12" color="#AAA">%s</font></i>',
-		props.Text, props.SubText
-	)
+	local fullText = string.format('%s\n<i><font size="12" color="#AAA">%s</font></i>', props.Text, props.SubText)
 	return e("Frame", {
 		Size = UDim2.new(1, 0, 0, 32),
 		BackgroundTransparency = 1,
@@ -303,6 +609,8 @@ local function ClassicResizeMethodPanel(props: {
 			end,
 		})
 	end
+
+	-- The classic UI only offers the original plugin's modes, without sub-options
 	return e(SubPanel, {
 		Title = "Resize Method",
 		LayoutOrder = props.LayoutOrder,
@@ -329,7 +637,12 @@ local function ClassicSelectionBehaviorPanel(props: {
 	LayoutOrder: number?,
 })
 	local current = props.Settings.SelectionThreshold
-	local function makeButton(threshold: Settings.SelectionThreshold, label: string, subText: string, layoutOrder: number)
+	local function makeButton(
+		threshold: Settings.SelectionThreshold,
+		label: string,
+		subText: string,
+		layoutOrder: number
+	)
 		return e(IconOperationButton, {
 			Text = label,
 			SubText = subText,
@@ -379,10 +692,13 @@ local function AdornmentOverlay(props: {
 		})
 	end
 
-	return ReactRoblox.createPortal(e("Folder", {
-		Name = "$ResizeAlignAdornments",
-		Archivable = false,
-	}, children), CoreGui)
+	return ReactRoblox.createPortal(
+		e("Folder", {
+			Name = "$ResizeAlignAdornments",
+			Archivable = false,
+		}, children),
+		CoreGui
+	)
 end
 
 local function ClassicContent(props: {
@@ -438,7 +754,9 @@ local function ModernContent(props: {
 			UpdatedSettings = props.UpdatedSettings,
 			LayoutOrder = nextOrder(),
 		}),
-		OptionsPanel = e(OptionsPanel, {
+		-- The classic UI is only offered for the modes the original plugin had.
+		-- It is the panel's only option, so the whole panel goes with it.
+		OptionsPanel = not MODES_WITHOUT_CLASSIC_UI[currentSettings.ResizeMode] and e(OptionsPanel, {
 			Settings = currentSettings,
 			UpdatedSettings = props.UpdatedSettings,
 			LayoutOrder = nextOrder(),

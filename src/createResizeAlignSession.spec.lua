@@ -12,6 +12,9 @@ local function makeTestSettings()
 		HaveHelp = false,
 		ResizeMode = "OuterTouch",
 		AcuteWedgeJoin = true,
+		UseCylinderForRoundedJoin = true,
+		RoundedJoinRadius = 0,
+		SplineJoinSegments = 0,
 		SelectionThreshold = "25",
 		ClassicUI = false,
 	}

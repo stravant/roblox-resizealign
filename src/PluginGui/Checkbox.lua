@@ -26,19 +26,22 @@ local function Checkbox(props: {
 	end
 
 	return e("Frame", {
-		Size = UDim2.new(1, 0, 0, HEIGHT),
+		Size = UDim2.fromScale(1, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
 		LayoutOrder = props.LayoutOrder,
 	}, {
 		ListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
 			HorizontalAlignment = Enum.HorizontalAlignment.Left,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Padding = UDim.new(0, 6),
 		}),
 		Label = e("TextButton", {
-			Size = UDim2.new(0, 0, 0, HEIGHT),
-			AutomaticSize = Enum.AutomaticSize.X,
+			Size = UDim2.fromOffset(0, HEIGHT),
+			AutomaticSize = Enum.AutomaticSize.XY,
+			TextWrapped = true,
 			Text = props.Label,
 			TextColor3 = Colors.WHITE,
 			AutoButtonColor = false,
@@ -56,6 +59,14 @@ local function Checkbox(props: {
 			[React.Event.MouseLeave] = function()
 				setLabelHovered(false)
 			end,
+		}, {
+			-- Shrink as well as grow so that a long label wraps instead of
+			-- pushing the checkbox out of a narrow container
+			Flex = e("UIFlexItem", {
+				FlexMode = Enum.UIFlexMode.Custom,
+				GrowRatio = 1,
+				ShrinkRatio = 1,
+			}),
 		}),
 		CheckBox = e("TextButton", {
 			Size = UDim2.new(0, HEIGHT, 0, HEIGHT),

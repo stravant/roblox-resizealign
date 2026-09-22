@@ -103,12 +103,8 @@ local function edgesToScreen(edges)
 end
 
 local function intersectRayRay(r1o, r1d, r2o, r2d)
-	local n =
-		(r2o - r1o):Dot(r1d) * r2d:Dot(r2d) +
-		(r1o - r2o):Dot(r2d) * r1d:Dot(r2d)
-	local d =
-		r1d:Dot(r1d) * r2d:Dot(r2d) -
-		r1d:Dot(r2d) * r1d:Dot(r2d)
+	local n = (r2o - r1o):Dot(r1d) * r2d:Dot(r2d) + (r1o - r2o):Dot(r2d) * r1d:Dot(r2d)
+	local d = r1d:Dot(r1d) * r2d:Dot(r2d) - r1d:Dot(r2d) * r1d:Dot(r2d)
 	if d == 0 then
 		return false
 	else
@@ -152,7 +148,7 @@ local function computeBarycentric(p: Vector3, v0: Vector3, v1: Vector3, v2: Vect
 	local d12 = e1:Dot(ep)
 	local denom = d00 * d11 - d01 * d01
 	if math.abs(denom) < 0.0001 then
-		return Vector3.new(1/3, 1/3, 1/3)
+		return Vector3.new(1 / 3, 1 / 3, 1 / 3)
 	end
 	local u = (d11 * d02 - d01 * d12) / denom
 	local v = (d00 * d12 - d01 * d02) / denom
@@ -160,7 +156,10 @@ local function computeBarycentric(p: Vector3, v0: Vector3, v1: Vector3, v2: Vect
 	return Vector3.new(w, u, v)
 end
 
-local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings.ResizeAlignSettings): ResizeAlignSession
+local function createResizeAlignSession(
+	plugin: Plugin,
+	activeSettings: Settings.ResizeAlignSettings
+): ResizeAlignSession
 	local changeSignal = Signal.new()
 
 	local mState: "FaceA" | "FaceB" = "FaceA"
@@ -169,7 +168,7 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 	local mDestroyed = false
 
 	local draggerHandler = DraggerHandler.new(plugin)
-	local connections: {RBXScriptConnection} = {}
+	local connections: { RBXScriptConnection } = {}
 
 	local function simpleGetTarget()
 		local mouseLocation = UserInputService:GetMouseLocation()
@@ -329,7 +328,7 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 			}
 		end
 
-		local threshold;
+		local threshold
 		if activeSettings.SelectionThreshold == "25" then
 			threshold = 0.25
 		elseif activeSettings.SelectionThreshold == "15" then
@@ -354,7 +353,11 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 			if distToOtherEdge then
 				local totalDist = distToOtherEdge + distToEdge
 				local frac = distToEdge / totalDist
-				if frac < smallestFrac and frac < threshold and getFaceSize(hit, edge.n) < getFaceSize(hit, normalId) then
+				if
+					frac < smallestFrac
+					and frac < threshold
+					and getFaceSize(hit, edge.n) < getFaceSize(hit, normalId)
+				then
 					if distToEdge < hardCutoff then
 						smallestFrac = frac
 						smallestFracEdge = edge
@@ -371,7 +374,8 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 	end
 
 	local function isCtrlHeld()
-		return UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
+		return UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)
+			or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
 	end
 
 	local function updateHover()
@@ -396,7 +400,15 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 			mState = "FaceA"
 			mHoverFace = nil
 			if savedFaceA and face.Object ~= savedFaceA.Object then
-				doExtend(savedFaceA, face, activeSettings.ResizeMode, activeSettings.AcuteWedgeJoin)
+				doExtend(
+					savedFaceA,
+					face,
+					activeSettings.ResizeMode,
+					activeSettings.AcuteWedgeJoin,
+					activeSettings.SplineJoinSegments,
+					activeSettings.UseCylinderForRoundedJoin,
+					activeSettings.RoundedJoinRadius
+				)
 			end
 			changeSignal:Fire()
 		end
@@ -412,41 +424,58 @@ local function createResizeAlignSession(plugin: Plugin, activeSettings: Settings
 	end
 
 	-- Input handling
-	table.insert(connections, UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
-		if gameProcessed then return end
-		if mDestroyed then return end
-
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			if draggerHandler:isEnabled() then
+	table.insert(
+		connections,
+		UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
+			if gameProcessed then
 				return
 			end
-			local face = getTarget()
-			if face and not face.Object.Locked then
-				selectFace(face)
-			else
-				resetFace()
+			if mDestroyed then
+				return
 			end
-		end
-	end))
 
-	table.insert(connections, UserInputService.InputEnded:Connect(function(input: InputObject, gameProcessed: boolean)
-		if mDestroyed then return end
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			if draggerHandler:isEnabled() and not isCtrlHeld() then
-				draggerHandler:disable()
-				updateHover()
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				if draggerHandler:isEnabled() then
+					return
+				end
+				local face = getTarget()
+				if face and not face.Object.Locked then
+					selectFace(face)
+				else
+					resetFace()
+				end
 			end
-		end
-	end))
+		end)
+	)
 
-	table.insert(connections, UserInputService.InputChanged:Connect(function(input: InputObject, gameProcessed: boolean)
-		if mDestroyed then return end
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			if not draggerHandler:isEnabled() then
-				updateHover()
+	table.insert(
+		connections,
+		UserInputService.InputEnded:Connect(function(input: InputObject, gameProcessed: boolean)
+			if mDestroyed then
+				return
 			end
-		end
-	end))
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				if draggerHandler:isEnabled() and not isCtrlHeld() then
+					draggerHandler:disable()
+					updateHover()
+				end
+			end
+		end)
+	)
+
+	table.insert(
+		connections,
+		UserInputService.InputChanged:Connect(function(input: InputObject, gameProcessed: boolean)
+			if mDestroyed then
+				return
+			end
+			if input.UserInputType == Enum.UserInputType.MouseMovement then
+				if not draggerHandler:isEnabled() then
+					updateHover()
+				end
+			end
+		end)
+	)
 
 	-- Idle loop for Ctrl detection
 	local idleThread = task.spawn(function()

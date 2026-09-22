@@ -443,7 +443,7 @@ local function MainGuiViewport(props: {
 	local showTutorial = not settings.DoneTutorial and settings.HaveHelp
 
 	return e("Frame", {
-		Size = UDim2.fromOffset(240, 0),
+		Size = UDim2.fromOffset(246, 0),
 		Position = UDim2.new(
 			settings.WindowAnchor.X, settings.WindowPosition.X,
 			settings.WindowAnchor.Y, settings.WindowPosition.Y),

@@ -4,6 +4,7 @@ type ExpectResult = {
 	toEqual: (expected: any) -> (),
 	toBeTruthy: () -> (),
 	toBeFalsy: () -> (),
+	toThrow: (message: string?) -> (),
 }
 
 export type TestContext = {

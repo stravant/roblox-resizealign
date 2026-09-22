@@ -21,6 +21,7 @@ type ExpectResult = {
 	toEqual: (expected: any) -> (),
 	toBeTruthy: () -> (),
 	toBeFalsy: () -> (),
+	toThrow: (message: string?) -> (),
 }
 
 type TestContext = {
@@ -60,6 +61,14 @@ local function createExpect(value: any): ExpectResult
 		toEqual = function(expected: any)
 			if not deepEqual(value, expected) then
 				error(`Expected values to be deeply equal`, 2)
+			end
+		end,
+		toThrow = function(message: string?)
+			assert(type(value) == "function", "toThrow expects a function")
+			local ok, err = pcall(value)
+			assert(not ok, "Expected the function to throw")
+			if message then
+				assert(string.find(tostring(err), message, 1, true), `Expected error containing {message}, got {tostring(err)}`)
 			end
 		end,
 		toBeTruthy = function()

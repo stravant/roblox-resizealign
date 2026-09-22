@@ -11,11 +11,14 @@ local JointMaker = require(DraggerFramework.Utility.JointMaker)
 local copyPartProps = require(Src.copyPartProps)
 local Settings = require(Src.Settings)
 local ShapeUtils = require(Src.ShapeUtils)
+local SplineJoin = require(Src.SplineJoin)
 
 local otherNormals = ShapeUtils.otherNormals
 local isWedgeShape = ShapeUtils.isWedgeShape
 local isCornerWedgeShape = ShapeUtils.isCornerWedgeShape
-local isCylinder = ShapeUtils.isCylinder
+
+local WEDGE_PART = Instance.new("Part")
+WEDGE_PART.Shape = Enum.PartType.Wedge
 
 export type Face = {
 	Object: BasePart,
@@ -41,12 +44,33 @@ local kNearParallelSinAngle = 0.01
 
 -- Bounds on how far a part may be extended to meet the true intersection of
 -- two nearly parallel faces before falling back to the parallel behavior:
--- an absolute bound of the Roblox max part size (larger isn't buildable), and
+-- an Vector3.Abs bound of the Roblox max part size (larger isn't buildable), and
 -- a relative bound of a multiple of the size of the geometry being operated
 -- on (an intersection many times further away than the parts are large is not
 -- what the user was aiming for).
 local kMaxExtension = 2048
 local kMaxExtensionFactor = 8
+
+-- The type solver does not know that Vector3 and vector have the same runtime representation.
+local function CAST_VECTOR(value: Vector3): vector
+	return value :: any
+end
+
+local function CAST_VECTOR3(value: vector): Vector3
+	return value :: any
+end
+
+local function CFrame_VectorToWorldSpace(cframe: CFrame, value: vector): vector
+	return CAST_VECTOR(cframe:VectorToWorldSpace(CAST_VECTOR3(value)))
+end
+
+local function COLOR3_TO_VECTOR(color3: Color3): vector
+	return vector.create(color3.R, color3.G, color3.B)
+end
+
+local function VECTOR_TO_COLOR3(vec: vector): Color3
+	return Color3.new(vec.x, vec.y, vec.z)
+end
 
 local function getFacePoints(face: Face)
 	local hsize = face.Object.Size / 2
@@ -84,25 +108,25 @@ local function getFacePoints(face: Face)
 	elseif face.IsWedge then
 		-- Slope face corners: top-back edge to bottom-front edge
 		return {
-			cf:PointToWorldSpace(Vector3.new( hsize.X,  hsize.Y,  hsize.Z)),
-			cf:PointToWorldSpace(Vector3.new(-hsize.X,  hsize.Y,  hsize.Z)),
-			cf:PointToWorldSpace(Vector3.new( hsize.X, -hsize.Y, -hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(hsize.X, hsize.Y, hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(-hsize.X, hsize.Y, hsize.Z)),
+			cf:PointToWorldSpace(Vector3.new(hsize.X, -hsize.Y, -hsize.Z)),
 			cf:PointToWorldSpace(Vector3.new(-hsize.X, -hsize.Y, -hsize.Z)),
 		}
 	else
 		local faceDir = Vector3.fromNormalId(face.Normal)
 		local faceA, faceB = otherNormals(faceDir)
-		faceDir, faceA, faceB = faceDir*hsize, faceA*hsize, faceB*hsize
+		faceDir, faceA, faceB = faceDir * hsize, faceA * hsize, faceB * hsize
 		return {
-			cf:PointToWorldSpace(faceDir + faceA + faceB);
-			cf:PointToWorldSpace(faceDir + faceA - faceB);
-			cf:PointToWorldSpace(faceDir - faceA - faceB);
-			cf:PointToWorldSpace(faceDir - faceA + faceB);
+			cf:PointToWorldSpace(faceDir + faceA + faceB),
+			cf:PointToWorldSpace(faceDir + faceA - faceB),
+			cf:PointToWorldSpace(faceDir - faceA - faceB),
+			cf:PointToWorldSpace(faceDir - faceA + faceB),
 		}
 	end
 end
 
-local function getPoints(part: BasePart): {Vector3}
+local function getPoints(part: BasePart): { Vector3 }
 	local hsize = part.Size / 2
 	local cf = part.CFrame
 	local points = {}
@@ -164,7 +188,7 @@ local function getBasis(face: Face)
 	end
 end
 
-local function getPositivePointToFace(face: Face, points: {Vector3}): Vector3
+local function getPositivePointToFace(face: Face, points: { Vector3 }): Vector3
 	local basePoint, normal = getBasis(face)
 	local maxDist = -math.huge
 	local maxPoint = nil
@@ -178,7 +202,7 @@ local function getPositivePointToFace(face: Face, points: {Vector3}): Vector3
 	return maxPoint
 end
 
-local function getNegativePointToFace(face: Face, points: {Vector3}): Vector3
+local function getNegativePointToFace(face: Face, points: { Vector3 }): Vector3
 	local basePoint, normal = getBasis(face)
 	local minDist = math.huge
 	local minPoint = nil
@@ -229,11 +253,7 @@ local function resizePart(face: Face, delta: number)
 		local wedge = Instance.new("WedgePart")
 		copyPartProps(face.Object, wedge)
 		wedge.Size = Vector3.new(delta, legUpLen, legAlongLen)
-		wedge.CFrame = CFrame.fromMatrix(
-			face.Object.Position + normal * (delta / 2),
-			normal,
-			legUpDir
-		)
+		wedge.CFrame = CFrame.fromMatrix(face.Object.Position + normal * (delta / 2), normal, legUpDir)
 		wedge.Parent = face.Object.Parent
 		wedge.Name = face.Object.Name .. "_Extended"
 	elseif face.IsWedge then
@@ -245,12 +265,12 @@ local function resizePart(face: Face, delta: number)
 		copyPartProps(face.Object, part)
 		part.CFrame = CFrame.fromMatrix(point + normal * 0.5 * delta, face.Object.CFrame.XVector, normal)
 		local size = face.Object.Size
-		part.Size = Vector3.new(size.X, delta, math.sqrt(size.Y^2 + size.Z^2))
+		part.Size = Vector3.new(size.X, delta, math.sqrt(size.Y ^ 2 + size.Z ^ 2))
 		part.Parent = face.Object.Parent
-		part.Name = face.Object.Name.."_Extended"
+		part.Name = face.Object.Name .. "_Extended"
 	else
 		local joiner = JointMaker.new(false)
-		joiner:pickUpParts({face.Object})
+		joiner:pickUpParts({ face.Object })
 		joiner:breakJointsToOutsiders()
 
 		local axis = Vector3.fromNormalId(face.Normal)
@@ -264,7 +284,17 @@ local function resizePart(face: Face, delta: number)
 	end
 end
 
-local function fillJoint(faceA: Face, faceB: Face, fillPoint: Vector3, fillAxis: Vector3, pointsA: {Vector3}, pointsB: {Vector3}, offsetA: Vector3, offsetB: Vector3)
+local function fillJoint(
+	faceA: Face,
+	faceB: Face,
+	fillPoint: Vector3,
+	fillAxis: Vector3,
+	pointsA: { Vector3 },
+	pointsB: { Vector3 },
+	offsetA: Vector3,
+	offsetB: Vector3,
+	minRadius: number
+)
 	local maxProj = -math.huge
 	local minProj = math.huge
 	local maxRadius = -math.huge
@@ -284,10 +314,11 @@ local function fillJoint(faceA: Face, faceB: Face, fillPoint: Vector3, fillAxis:
 	end
 	local centerPoint = fillPoint + fillAxis * (0.5 * (minProj + maxProj))
 	local length = (maxProj - minProj)
-	local radius = maxRadius
+	-- A smaller filler than the faces need would leave the gap exposed
+	local radius = math.max(maxRadius, minRadius)
 	local cyl = Instance.new("Part")
 	copyPartProps(faceB.Object, cyl)
-	if isCylinder(faceA.Object) and isCylinder(faceB.Object) then
+	if ShapeUtils.isCylinder(faceA.Object) and ShapeUtils.isCylinder(faceB.Object) then
 		cyl.Shape = Enum.PartType.Ball
 	else
 		cyl.Shape = Enum.PartType.Cylinder
@@ -336,15 +367,164 @@ local function fillAcuteGap(face: Face, dirSelf: Vector3, dirOther: Vector3, cro
 	local wedge = Instance.new("WedgePart")
 	copyPartProps(face.Object, wedge)
 	wedge.Size = Vector3.new(2 * crossHalf, extraLen, 2 * perpHalf)
-	wedge.CFrame = CFrame.fromMatrix(
-		facePoint + dirSelf * extraLen / 2,
-		dirSelf:Cross(outerDir),
-		dirSelf
-	)
+	wedge.CFrame = CFrame.fromMatrix(facePoint + dirSelf * extraLen / 2, dirSelf:Cross(outerDir), dirSelf)
 	wedge.Parent = face.Object.Parent
 end
 
-local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteWedgeJoin: boolean?)
+-- Slopes use the same rectangular/triangular extrusion profiles as resizePart.
+-- Their selected normal is not one of the original part's cardinal axes.
+local function getSplineFace(face: Face): (CFrame, vector, vector, ("Part" | "WedgePart")?)
+	local part = face.Object
+	local cf = part.CFrame
+	local size = part.Size
+	local point, normal = getBasis(face)
+	local depth = vector.dot(vector.abs(cf:VectorToObjectSpace(normal) :: any), size :: any)
+
+	if face.CornerWedgeSide then
+		local up, height, width
+
+		if face.CornerWedgeSide == "Right" then
+			height = math.sqrt(size.X * size.X + size.Y * size.Y)
+			up = (cf.XVector * size.X + cf.YVector * size.Y) / height
+			width = size.Z
+		else
+			height = size.X
+			up = -cf.XVector
+			width = math.sqrt(size.Y * size.Y + size.Z * size.Z)
+		end
+
+		return CFrame.fromMatrix(point, normal, up),
+			vector.create(depth, height, width),
+			vector.create(1, 0, 0),
+			"WedgePart"
+	elseif face.IsWedge then
+		local width = math.sqrt(size.Y * size.Y + size.Z * size.Z)
+		return CFrame.fromMatrix(point, cf.XVector, normal),
+			vector.create(size.X, depth, width),
+			vector.create(0, 1, 0),
+			"Part"
+	end
+	return CFrame.new(point) * cf.Rotation, size :: any, Vector3.fromNormalId(face.Normal) :: any, nil
+end
+
+-- Rounded Join passes how far to resize each part before joining them, which
+-- sets its two parts back from their corner. Spline Join leaves both parts alone.
+local function createSplineJoin(faceA: Face, faceB: Face, segmentCount: number?, resizeA: number?, resizeB: number?)
+	local paddingA = resizeA or 0
+	local paddingB = resizeB or 0
+	-- Rounded Join has already chosen both endpoints, so they are not refitted
+	local fitSurface = resizeA == nil and resizeB == nil
+
+	local frameA, profileA, localNormalA, extrusionClass = getSplineFace(faceA)
+	local frameB, profileB, localNormalB = getSplineFace(faceB)
+	local pointA = frameA.Position :: any
+	local pointB = frameB.Position :: any
+	local normalA = CFrame_VectorToWorldSpace(frameA, localNormalA)
+	local normalB = CFrame_VectorToWorldSpace(frameB, localNormalB)
+	local startPoint = pointA + normalA * paddingA
+	local startFrame = CFrame.new(startPoint :: any) * frameA.Rotation
+	local endPoint, surfaceOffset, targetRotation = SplineJoin.getTargetPoint(
+		startFrame,
+		CFrame.new((pointB + normalB * paddingB) :: any) * frameB.Rotation,
+		profileA,
+		profileB,
+		localNormalA,
+		localNormalB
+	)
+
+	local temporaryTemplate: BasePart?
+	local template = faceA.Object
+
+	if extrusionClass then
+		local extrusion = if extrusionClass == "WedgePart" then WEDGE_PART:Clone() else Instance.new("Part")
+		copyPartProps(template, extrusion)
+		extrusion.Name = template.Name
+		extrusion.Size = profileA :: any
+		template = extrusion
+		temporaryTemplate = extrusion
+	end
+
+	local parts = SplineJoin.plan(
+		template,
+		startFrame,
+		endPoint,
+		normalB,
+		localNormalA,
+		segmentCount,
+		if fitSurface then surfaceOffset else nil,
+		targetRotation
+	)
+
+	if temporaryTemplate then
+		temporaryTemplate:Destroy()
+	end
+
+	if not parts then
+		error("Spline Join: the segment count or resulting segment sizes cannot form a join.")
+	end
+
+	-- Color and Transparency are the visual properties that can be blended, so
+	-- when the two parts differ in them, fade from one to the other along the
+	-- spline. Each segment takes the blend at its middle, measured by length.
+	local objectA = faceA.Object
+	local objectB = faceB.Object
+	local transparencyA = objectA.Transparency
+	local transparencyB = objectB.Transparency
+	local colorA = objectA.Color
+	local colorB = objectB.Color
+
+	if colorA ~= colorB or transparencyA ~= transparencyB then
+		local transparencyDiff = transparencyB - transparencyA
+		local lengthAxis = vector.abs(localNormalA)
+		local totalLength = 0
+
+		colorA = COLOR3_TO_VECTOR(colorA)
+		colorB = COLOR3_TO_VECTOR(colorB)
+
+		for _, part in parts do
+			totalLength += vector.dot(part.Size :: any, lengthAxis)
+		end
+
+		local coveredLength = 0
+		for _, part in parts do
+			local length = vector.dot(part.Size :: any, lengthAxis)
+			local alpha = (coveredLength + length / 2) / totalLength
+			coveredLength += length
+			part.Color = VECTOR_TO_COLOR3(vector.lerp(colorA, colorB, alpha))
+			part.Transparency = math.lerp(transparencyA, transparencyDiff, alpha)
+		end
+	end
+
+	local recording = ChangeHistoryService:TryBeginRecording("ResizeAlign")
+
+	if paddingA ~= 0 then
+		resizePart(faceA, paddingA)
+	end
+
+	if paddingB ~= 0 then
+		resizePart(faceB, paddingB)
+	end
+
+	local parent = objectA.Parent
+
+	for _, part in parts do
+		part.Parent = parent
+	end
+
+	if recording then
+		ChangeHistoryService:FinishRecording(recording, Enum.FinishRecordingOperation.Commit)
+	end
+end
+
+local function doExtend(
+	faceA: Face,
+	faceB: Face,
+	resizeMode: ResizeMode,
+	acuteWedgeJoin: boolean?,
+	splineJoinSegments: number?,
+	useCylinderForRoundedJoin: boolean?,
+	roundedJoinRadius: number?
+)
 	local pointsA = getFacePoints(faceA)
 	local pointsB = getFacePoints(faceB)
 	local localDimensionA = getDimension(faceA)
@@ -391,13 +571,48 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 		end
 	end
 
-	if sinAngle < kParallelSinAngle then
+	if resizeMode ~= "SplineJoin" and sinAngle < kParallelSinAngle then
 		doParallelResize()
 		return
 	end
 
-	local extendPointA, extendPointB;
-	if resizeMode == "ExtendInto" or resizeMode == "OuterTouch" or resizeMode == "WedgeJoin" or resizeMode == "ButtJoint" then
+	if resizeMode == "SplineJoin" then
+		local pointA = getBasis(faceA)
+		local pointB = getBasis(faceB)
+		local chord = pointB - pointA
+		local chordLength = chord.Magnitude
+		-- Parallel faces with a sideways offset still need a spline (TOPRAIL→C).
+		-- Collinear facing faces are a straight Outer Touch, not a spline.
+		if
+			chordLength > 0.001
+			and dirA:Dot(chord) >= 0.999 * chordLength
+			and (-dirB):Dot(chord) >= 0.999 * chordLength
+		then
+			doParallelResize()
+			return
+		end
+
+		-- Zero, like leaving it out, chooses the segment count automatically
+		createSplineJoin(faceA, faceB, if splineJoinSegments == 0 then nil else splineJoinSegments)
+		return
+	end
+
+	-- Two cylinders always get the sphere filler from fillJoint. The cylinder
+	-- filler is the default, so only an explicit false picks the spline.
+	local isCylinderPair = ShapeUtils.isCylinder(faceA.Object) and ShapeUtils.isCylinder(faceB.Object)
+	local useSplineFiller = useCylinderForRoundedJoin == false and not isCylinderPair
+	-- The sphere between two cylinders has to match their radius, so the
+	-- radius option does not apply to it
+	local minFillerRadius = if isCylinderPair then 0 else roundedJoinRadius or 0
+
+	local extendPointA, extendPointB
+	local roundedRadius: number? = nil
+	if
+		resizeMode == "ExtendInto"
+		or resizeMode == "OuterTouch"
+		or resizeMode == "WedgeJoin"
+		or resizeMode == "ButtJoint"
+	then
 		extendPointA = getPositivePointToFace(faceB, pointsA)
 		extendPointB = getPositivePointToFace(faceA, pointsB)
 	elseif resizeMode == "ExtendUpTo" or resizeMode == "InnerTouch" then
@@ -411,12 +626,24 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 			local projPoint = extendPointA + fillAxis * (point - extendPointA):Dot(fillAxis)
 			radiusA = math.max(radiusA, (point - projPoint).Magnitude)
 		end
+		roundedRadius = radiusA
+
+		-- The filler is centered where lines running fillerRadius inside the
+		-- outer surface of each part cross, making it tangent to both surfaces.
+		-- The spline filler measures its own radius back from where the
+		-- center lines cross, so it keeps the automatic radius here.
+		local fillerRadius = if useSplineFiller then radiusA else math.max(radiusA, minFillerRadius)
+		if fillerRadius > radiusA then
+			local outerPointA = getPositivePointToFace(faceB, pointsA)
+			local onAxisA = extendPointA + fillAxis * (outerPointA - extendPointA):Dot(fillAxis)
+			extendPointA += (onAxisA - outerPointA).Unit * (fillerRadius - radiusA)
+		end
 		local centerPointB = getBasis(faceB)
 		extendPointB = getPositivePointToFace(faceA, pointsB)
 		local proj = (extendPointB - centerPointB):Dot(fillAxis)
 		local projPoint = centerPointB + fillAxis * proj
 		local distanceToAxis = (extendPointB - projPoint).Magnitude
-		local frac = radiusA / distanceToAxis
+		local frac = fillerRadius / distanceToAxis
 		extendPointB = extendPointB:Lerp(projPoint, frac)
 	else
 		error("unreachable")
@@ -473,7 +700,7 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 	if resizeMode == "ExtendInto" or resizeMode == "ExtendUpTo" then
 		local denom2 = dirA:Dot(dirB)
 		if math.abs(denom2) > 0.0001 and not isExtrusionFace(faceA) then
-			lenA = - (extendPointA - extendPointB):Dot(dirB) / denom2
+			lenA = -(extendPointA - extendPointB):Dot(dirB) / denom2
 			lenB = 0
 		else
 			local points = getPoints(faceB.Object)
@@ -524,6 +751,25 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 		end
 	end
 
+	if roundedRadius and useSplineFiller then
+		-- Preserve Rounded Join's original intersection and filler radius.
+		-- For a fillet of radius R, the tangent points sit R*tan(turn/2)
+		-- back from that intersection along each of the two source parts.
+		local turn = math.acos(math.clamp(-dirA:Dot(dirB), -1, 1))
+		-- The radius option measures the outside of the bend, as it does for
+		-- the cylinder filler, while the spline is planned along its center
+		-- line, which runs roundedRadius inside that. The automatic bend,
+		-- whose center line has that same radius, is the tightest allowed.
+		local centerRadius = math.max(roundedRadius, (roundedJoinRadius or 0) - roundedRadius)
+		local setback = centerRadius * math.tan(turn / 2)
+		local paddingA, paddingB = lenA - setback, lenB - setback
+		if paddingA <= -extendableA + 0.001 or paddingB <= -extendableB + 0.001 then
+			return
+		end
+		createSplineJoin(faceA, faceB, nil, paddingA, paddingB)
+		return
+	end
+
 	local recording = ChangeHistoryService:TryBeginRecording("ResizeAlign")
 
 	resizePart(faceA, lenA)
@@ -541,17 +787,31 @@ local function doExtend(faceA: Face, faceB: Face, resizeMode: ResizeMode, acuteW
 
 	if resizeMode == "RoundedJoin" then
 		local fillAxis = dirA:Cross(dirB).Unit
-		fillJoint(faceA, faceB, extendPointA + dirA * lenA, fillAxis, pointsA, pointsB, dirA * lenA, dirB * lenB)
+		fillJoint(
+			faceA,
+			faceB,
+			extendPointA + dirA * lenA,
+			fillAxis,
+			pointsA,
+			pointsB,
+			dirA * lenA,
+			dirB * lenB,
+			minFillerRadius
+		)
 	end
 
 	if resizeMode == "ButtJoint" then
 		local points = getFacePoints(faceB)
-		local minV =  math.huge
+		local minV = math.huge
 		local maxV = -math.huge
 		for _, v in points do
 			local proj = (v - extendPointA):Dot(dirA)
-			if proj < minV then minV = proj end
-			if proj > maxV then maxV = proj end
+			if proj < minV then
+				minV = proj
+			end
+			if proj > maxV then
+				maxV = proj
+			end
 		end
 		resizePart(faceA, -(maxV - minV))
 	end

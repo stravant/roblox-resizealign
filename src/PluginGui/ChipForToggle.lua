@@ -19,6 +19,9 @@ local function ChipWithOutline(props: {
 	ZIndex: number?,
 	BackgroundColor3: Color3,
 	OnClick: () -> (),
+	JoinedRight: boolean?,
+	OpenBelow: boolean?,
+	HideOutline: boolean?,
 	children: any,
 })
 	local children = {
@@ -29,7 +32,10 @@ local function ChipWithOutline(props: {
 			BorderStrokePosition = Enum.BorderStrokePosition.Center,
 		}),
 		Corner = e("UICorner", {
-			CornerRadius = UDim.new(0, 4),
+			TopLeftRadius = UDim.new(0, 4),
+			TopRightRadius = UDim.new(0, if props.JoinedRight then 0 else 4),
+			BottomLeftRadius = UDim.new(0, if props.OpenBelow then 0 else 4),
+			BottomRightRadius = UDim.new(0, if props.JoinedRight or props.OpenBelow then 0 else 4),
 		}),
 		Padding = e("UIPadding", {
 			PaddingLeft = UDim.new(0, 12),
@@ -62,13 +68,16 @@ local function ChipForToggle(props: {
 	TextSize: number?,
 	IsCurrent: boolean,
 	OnClick: () -> (),
+	JoinedRight: boolean?,
+	OpenBelow: boolean?,
+	HideOutline: boolean?,
 })
 	local isCurrent = props.IsCurrent
 	return e(ChipWithOutline, {
 		Text = props.Text,
 		TextColor3 = Colors.WHITE,
 		BorderColor3 = Colors.WHITE,
-		BorderSize = if isCurrent then 2 else nil,
+		BorderSize = if isCurrent and not props.HideOutline then 2 else nil,
 		Bolded = isCurrent,
 		BackgroundColor3 = Colors.ACTION_BLUE,
 		LayoutOrder = props.LayoutOrder,
@@ -76,6 +85,8 @@ local function ChipForToggle(props: {
 		TextSize = props.TextSize,
 		ZIndex = if isCurrent then 2 else 1,
 		OnClick = props.OnClick,
+		JoinedRight = props.JoinedRight,
+		OpenBelow = props.OpenBelow,
 	}, {
 		Flex = e("UIFlexItem", {
 			FlexMode = Enum.UIFlexMode.Grow,

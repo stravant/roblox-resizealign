@@ -27,12 +27,16 @@ local function makePart(cf: CFrame, size: Vector3): BasePart
 end
 
 local function cleanup(...: BasePart)
-	for _, part in {...} do
+	for _, part in { ... } do
 		part:Destroy()
 	end
 	-- Also clean up any children that doExtend may have created (e.g. RoundedJoin filler, acute wedge fills)
 	for _, child in workspace:GetChildren() do
-		if child.Name:find("_Extended") or (child:IsA("Part") and child.Shape == Enum.PartType.Cylinder) or child:IsA("WedgePart") then
+		if
+			child.Name:find("_Extended")
+			or (child:IsA("Part") and child.Shape == Enum.PartType.Cylinder)
+			or child:IsA("WedgePart")
+		then
 			child:Destroy()
 		end
 	end
@@ -112,10 +116,7 @@ return function(t: TestContext)
 
 	t.test("OuterTouch: angled parts both extend", function()
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-		local partB = makePart(
-			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 2, 2)
-		)
+		local partB = makePart(CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 2, 2))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Left)
 
@@ -133,10 +134,7 @@ return function(t: TestContext)
 		-- Part A face Right (+X), Part B face Bottom rotated 45° → dirB = (0.707, -0.707, 0)
 		-- dirA·dirB = 0.707 > 0 (acute outward point)
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
-		local partB = makePart(
-			CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 4, 4)
-		)
+		local partB = makePart(CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 4, 4))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Bottom)
 
@@ -171,10 +169,7 @@ return function(t: TestContext)
 	t.test("WedgeJoin: acute wedge geometry is correct for face A", function()
 		-- Same acute setup, verify wedge A's specific geometry
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
-		local partB = makePart(
-			CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 4, 4)
-		)
+		local partB = makePart(CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 4, 4))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Bottom)
 
@@ -224,22 +219,12 @@ return function(t: TestContext)
 	t.test("WedgeJoin: acute wedges meet at outer-touch intersection", function()
 		-- The parts should be resized to inner-touch, with wedges filling to outer-touch
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
-		local partB = makePart(
-			CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 4, 4)
-		)
+		local partB = makePart(CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 4, 4))
 
 		-- Do an InnerTouch on identical geometry to get the expected inner size
 		local partA_inner = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
-		local partB_inner = makePart(
-			CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 4, 4)
-		)
-		doExtend(
-			makeFace(partA_inner, Enum.NormalId.Right),
-			makeFace(partB_inner, Enum.NormalId.Bottom),
-			"InnerTouch"
-		)
+		local partB_inner = makePart(CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 4, 4))
+		doExtend(makeFace(partA_inner, Enum.NormalId.Right), makeFace(partB_inner, Enum.NormalId.Bottom), "InnerTouch")
 		local innerSizeAx = partA_inner.Size.X
 
 		-- Now do the actual WedgeJoin
@@ -310,10 +295,7 @@ return function(t: TestContext)
 	t.test("OuterTouch: acuteWedgeJoin=true creates wedges on acute angle", function()
 		-- Acute angle (dirA·dirB > 0) with flag on should create wedges
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
-		local partB = makePart(
-			CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 4, 4)
-		)
+		local partB = makePart(CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 4, 4))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Bottom)
 
@@ -333,10 +315,7 @@ return function(t: TestContext)
 	t.test("OuterTouch: acuteWedgeJoin=false creates no wedges on acute angle", function()
 		-- Acute angle with flag off should NOT create wedges
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
-		local partB = makePart(
-			CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 4, 4)
-		)
+		local partB = makePart(CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 4, 4))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Bottom)
 
@@ -356,10 +335,7 @@ return function(t: TestContext)
 	t.test("OuterTouch: acuteWedgeJoin=true creates no wedges on obtuse angle", function()
 		-- Obtuse angle (dirA·dirB < 0) should NOT trigger wedge fill even with flag on
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-		local partB = makePart(
-			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 2, 2)
-		)
+		local partB = makePart(CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 2, 2))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Left)
 
@@ -404,10 +380,7 @@ return function(t: TestContext)
 		-- 0.1 degrees is below the old hardcoded parallel threshold (~0.57 deg),
 		-- which incorrectly gave these clearly-angled parts the parallel treatment
 		local partA = makePart(CFrame.new(-5, 0, 0), Vector3.new(8, 1, 1))
-		local partB = makePart(
-			CFrame.new(5, 0, 0) * CFrame.Angles(0, 0, math.rad(0.1)),
-			Vector3.new(8, 1, 1)
-		)
+		local partB = makePart(CFrame.new(5, 0, 0) * CFrame.Angles(0, 0, math.rad(0.1)), Vector3.new(8, 1, 1))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Left)
 
@@ -428,8 +401,8 @@ return function(t: TestContext)
 		local planeNormal = partB.CFrame:VectorToWorldSpace(Vector3.new(-1, 0, 0))
 		local hsize = partA.Size / 2
 		local minDist = math.huge
-		for _, j in {-1, 1} do
-			for _, k in {-1, 1} do
+		for _, j in { -1, 1 } do
+			for _, k in { -1, 1 } do
 				local corner = partA.CFrame:PointToWorldSpace(Vector3.new(hsize.X, j * hsize.Y, k * hsize.Z))
 				minDist = math.min(minDist, math.abs((corner - planePoint):Dot(planeNormal)))
 			end
@@ -441,10 +414,7 @@ return function(t: TestContext)
 
 	t.test("OuterTouch: angle within floating point noise acts as parallel", function()
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-		local partB = makePart(
-			CFrame.new(3, 0, 0) * CFrame.Angles(0, 0, 1e-6),
-			Vector3.new(2, 2, 2)
-		)
+		local partB = makePart(CFrame.new(3, 0, 0) * CFrame.Angles(0, 0, 1e-6), Vector3.new(2, 2, 2))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Left)
 
@@ -464,10 +434,7 @@ return function(t: TestContext)
 		-- faces is hundreds of thousands of studs away, so the parallel
 		-- behavior is what the user wants
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-		local partB = makePart(
-			CFrame.new(3, 50, 0) * CFrame.Angles(0, 0, math.rad(0.01)),
-			Vector3.new(2, 2, 2)
-		)
+		local partB = makePart(CFrame.new(3, 50, 0) * CFrame.Angles(0, 0, math.rad(0.01)), Vector3.new(2, 2, 2))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Left)
 
@@ -486,10 +453,7 @@ return function(t: TestContext)
 
 	t.test("WedgeJoin: slightly angled parts join without giant wedges", function()
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-		local partB = makePart(
-			CFrame.new(3, 0, 0) * CFrame.Angles(0, 0, math.rad(0.05)),
-			Vector3.new(2, 2, 2)
-		)
+		local partB = makePart(CFrame.new(3, 0, 0) * CFrame.Angles(0, 0, math.rad(0.05)), Vector3.new(2, 2, 2))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Left)
 
@@ -531,10 +495,7 @@ return function(t: TestContext)
 
 	t.test("InnerTouch: angled parts extend to innermost alignment", function()
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-		local partB = makePart(
-			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 2, 2)
-		)
+		local partB = makePart(CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 2, 2))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Left)
 
@@ -580,10 +541,7 @@ return function(t: TestContext)
 
 	t.test("ExtendUpTo: angled, Part B unchanged", function()
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-		local partB = makePart(
-			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 2, 2)
-		)
+		local partB = makePart(CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 2, 2))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Left)
 
@@ -617,18 +575,12 @@ return function(t: TestContext)
 
 	t.test("ExtendInto: extends further than ExtendUpTo for angled parts", function()
 		local partA1 = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-		local partB1 = makePart(
-			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 2, 2)
-		)
+		local partB1 = makePart(CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 2, 2))
 		doExtend(makeFace(partA1, Enum.NormalId.Right), makeFace(partB1, Enum.NormalId.Left), "ExtendUpTo")
 		local upToSize = partA1.Size.X
 
 		local partA2 = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-		local partB2 = makePart(
-			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 2, 2)
-		)
+		local partB2 = makePart(CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 2, 2))
 		doExtend(makeFace(partA2, Enum.NormalId.Right), makeFace(partB2, Enum.NormalId.Left), "ExtendInto")
 		local intoSize = partA2.Size.X
 
@@ -662,10 +614,7 @@ return function(t: TestContext)
 
 	t.test("RoundedJoin: creates a filler part", function()
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-		local partB = makePart(
-			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 2, 2)
-		)
+		local partB = makePart(CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 2, 2))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Left)
 
@@ -698,6 +647,36 @@ return function(t: TestContext)
 		cleanup(partA, partB)
 	end)
 
+	t.test("SplineJoin: collinear faces use OuterTouch", function()
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
+		local partB = makePart(CFrame.new(3, 0, 0), Vector3.new(2, 2, 2))
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Left)
+
+		local childCountBefore = #workspace:GetChildren()
+
+		doExtend(faceA, faceB, "SplineJoin")
+
+		t.expect(#workspace:GetChildren()).toBe(childCountBefore)
+		t.expect(partA.Size.X > 2).toBe(true)
+		t.expect(partB.Size).toBe(Vector3.new(2, 2, 2))
+		cleanup(partA, partB)
+	end)
+
+	t.test("SplineJoin: parallel faces with a lateral offset still generate a spline", function()
+		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
+		local partB = makePart(CFrame.new(3, 5, 0), Vector3.new(2, 2, 2))
+		local faceA = makeFace(partA, Enum.NormalId.Right)
+		local faceB = makeFace(partB, Enum.NormalId.Left)
+
+		local childCountBefore = #workspace:GetChildren()
+
+		doExtend(faceA, faceB, "SplineJoin")
+
+		t.expect(#workspace:GetChildren() > childCountBefore).toBe(true)
+		cleanup(partA, partB)
+	end)
+
 	--------------------------------------------------------------------------------
 	-- Edge cases
 	--------------------------------------------------------------------------------
@@ -725,7 +704,8 @@ return function(t: TestContext)
 	end)
 
 	t.test("All modes run without error on axis-aligned parts", function()
-		local modes: {doExtend.ResizeMode} = {"OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ButtJoint", "ExtendUpTo", "ExtendInto"}
+		local modes: { doExtend.ResizeMode } =
+			{ "OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ButtJoint", "ExtendUpTo", "ExtendInto" }
 		for _, mode in modes do
 			local partA = makePart(CFrame.new(-5, 0, 0), Vector3.new(4, 4, 4))
 			local partB = makePart(CFrame.new(5, 0, 0), Vector3.new(4, 4, 4))
@@ -737,13 +717,11 @@ return function(t: TestContext)
 	end)
 
 	t.test("All modes run without error on angled parts", function()
-		local modes: {doExtend.ResizeMode} = {"OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ExtendUpTo", "ExtendInto"}
+		local modes: { doExtend.ResizeMode } =
+			{ "OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ExtendUpTo", "ExtendInto" }
 		for _, mode in modes do
 			local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-			local partB = makePart(
-				CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-				Vector3.new(2, 2, 2)
-			)
+			local partB = makePart(CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 2, 2))
 			local faceA = makeFace(partA, Enum.NormalId.Right)
 			local faceB = makeFace(partB, Enum.NormalId.Left)
 			doExtend(faceA, faceB, mode)
@@ -874,8 +852,8 @@ return function(t: TestContext)
 		cleanup(partB)
 	end)
 
-	t.test("CornerWedge: all modes run without error on right slope", function()
-		local modes: {doExtend.ResizeMode} = {"OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ExtendUpTo", "ExtendInto"}
+	t.test("CornerWedge: resize modes run without error on right slope", function()
+		local modes: { doExtend.ResizeMode } = { "OuterTouch", "InnerTouch", "WedgeJoin", "ExtendUpTo", "ExtendInto" }
 		for _, mode in modes do
 			local cornerWedge = Instance.new("CornerWedgePart")
 			cornerWedge.Size = Vector3.new(4, 4, 4)
@@ -898,8 +876,8 @@ return function(t: TestContext)
 		end
 	end)
 
-	t.test("CornerWedge: all modes run without error on back slope", function()
-		local modes: {doExtend.ResizeMode} = {"OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ExtendUpTo", "ExtendInto"}
+	t.test("CornerWedge: resize modes run without error on back slope", function()
+		local modes: { doExtend.ResizeMode } = { "OuterTouch", "InnerTouch", "WedgeJoin", "ExtendUpTo", "ExtendInto" }
 		for _, mode in modes do
 			local cornerWedge = Instance.new("CornerWedgePart")
 			cornerWedge.Size = Vector3.new(4, 4, 4)
@@ -1000,8 +978,8 @@ return function(t: TestContext)
 		cleanup(partB)
 	end)
 
-	t.test("WedgePart slope: all modes run without error", function()
-		local modes: {doExtend.ResizeMode} = {"OuterTouch", "InnerTouch", "WedgeJoin", "RoundedJoin", "ExtendUpTo", "ExtendInto"}
+	t.test("WedgePart slope: resize modes run without error", function()
+		local modes: { doExtend.ResizeMode } = { "OuterTouch", "InnerTouch", "WedgeJoin", "ExtendUpTo", "ExtendInto" }
 		for _, mode in modes do
 			local wedge = Instance.new("WedgePart")
 			wedge.Size = Vector3.new(4, 4, 4)
@@ -1128,47 +1106,58 @@ return function(t: TestContext)
 	-- RoundedJoin with cylinders
 	--------------------------------------------------------------------------------
 
-	t.test("RoundedJoin: cylinder parts produce filler", function()
-		local partA = Instance.new("Part")
-		partA.Shape = Enum.PartType.Cylinder
-		partA.Size = Vector3.new(4, 2, 2)
-		partA.CFrame = CFrame.new(-3, 0, 0)
-		partA.Anchored = true
-		partA.Parent = workspace
+	t.test("RoundedJoin: cylinder parts are joined with a sphere, ignoring the filler and radius options", function()
+		-- Every combination has to give the same result as the first
+		local sphereCenter, sizeA, sizeB
+		for _, radius in { 0, 3 } do
+			for _, useCylinder in { true, false } do
+				local folder = Instance.new("Folder")
+				folder.Parent = workspace
 
-		local partB = Instance.new("Part")
-		partB.Shape = Enum.PartType.Cylinder
-		partB.Size = Vector3.new(4, 2, 2)
-		partB.CFrame = CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45))
-		partB.Anchored = true
-		partB.Parent = workspace
+				local partA = Instance.new("Part")
+				partA.Shape = Enum.PartType.Cylinder
+				partA.Size = Vector3.new(4, 2, 2)
+				partA.CFrame = CFrame.new(-3, 0, 0)
+				partA.Anchored = true
+				partA.Parent = folder
 
-		local faceA = makeFace(partA, Enum.NormalId.Right)
-		local faceB = makeFace(partB, Enum.NormalId.Left)
+				local partB = Instance.new("Part")
+				partB.Shape = Enum.PartType.Cylinder
+				partB.Size = Vector3.new(4, 2, 2)
+				partB.CFrame = CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45))
+				partB.Anchored = true
+				partB.Parent = folder
 
-		doExtend(faceA, faceB, "RoundedJoin")
+				local faceA = makeFace(partA, Enum.NormalId.Right)
+				local faceB = makeFace(partB, Enum.NormalId.Left)
 
-		-- Find the filler part
-		local fillerPart = nil
-		for _, child in workspace:GetChildren() do
-			if child:IsA("Part") and child ~= partA and child ~= partB then
-				fillerPart = child
-				break
+				doExtend(faceA, faceB, "RoundedJoin", nil, nil, useCylinder, radius)
+
+				local fillers = {}
+				for _, child in folder:GetChildren() do
+					if child ~= partA and child ~= partB then
+						table.insert(fillers, child)
+					end
+				end
+				t.expect(#fillers).toBe(1)
+				t.expect(fillers[1].Shape).toBe(Enum.PartType.Ball)
+				sphereCenter = sphereCenter or fillers[1].Position
+				sizeA = sizeA or partA.Size
+				sizeB = sizeB or partB.Size
+				-- The sphere matches the cylinders, whatever the radius option says
+				t.expect(fillers[1].Size:FuzzyEq(Vector3.new(2, 2, 2), 0.0001)).toBe(true)
+				t.expect(fillers[1].Position:FuzzyEq(sphereCenter, 0.0001)).toBe(true)
+				t.expect(partA.Size:FuzzyEq(sizeA, 0.0001)).toBe(true)
+				t.expect(partB.Size:FuzzyEq(sizeB, 0.0001)).toBe(true)
+
+				folder:Destroy()
 			end
 		end
-		t.expect(fillerPart ~= nil).toBe(true)
-
-		partA:Destroy()
-		partB:Destroy()
-		cleanup()
 	end)
 
 	t.test("RoundedJoin: non-cylinder parts produce filler", function()
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-		local partB = makePart(
-			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 2, 2)
-		)
+		local partB = makePart(CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 2, 2))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Left)
 
@@ -1192,10 +1181,7 @@ return function(t: TestContext)
 
 	t.test("ButtJoint: angled parts don't error and Part A butts up", function()
 		local partA = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 2, 2))
-		local partB = makePart(
-			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 2, 2)
-		)
+		local partB = makePart(CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 2, 2))
 		local faceA = makeFace(partA, Enum.NormalId.Right)
 		local faceB = makeFace(partB, Enum.NormalId.Left)
 
@@ -1215,27 +1201,13 @@ return function(t: TestContext)
 	t.test("InnerTouch delta <= OuterTouch delta for angled parts", function()
 		-- InnerTouch uses innermost alignment point, so Part A should extend less
 		local partA_outer = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
-		local partB_outer = makePart(
-			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 4, 4)
-		)
-		doExtend(
-			makeFace(partA_outer, Enum.NormalId.Right),
-			makeFace(partB_outer, Enum.NormalId.Left),
-			"OuterTouch"
-		)
+		local partB_outer = makePart(CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 4, 4))
+		doExtend(makeFace(partA_outer, Enum.NormalId.Right), makeFace(partB_outer, Enum.NormalId.Left), "OuterTouch")
 		local outerSizeAx = partA_outer.Size.X
 
 		local partA_inner = makePart(CFrame.new(-3, 0, 0), Vector3.new(2, 4, 4))
-		local partB_inner = makePart(
-			CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)),
-			Vector3.new(2, 4, 4)
-		)
-		doExtend(
-			makeFace(partA_inner, Enum.NormalId.Right),
-			makeFace(partB_inner, Enum.NormalId.Left),
-			"InnerTouch"
-		)
+		local partB_inner = makePart(CFrame.new(2, 2, 0) * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(2, 4, 4))
+		doExtend(makeFace(partA_inner, Enum.NormalId.Right), makeFace(partB_inner, Enum.NormalId.Left), "InnerTouch")
 		local innerSizeAx = partA_inner.Size.X
 
 		-- Inner should extend less than or equal to outer
@@ -1312,10 +1284,7 @@ return function(t: TestContext)
 		wedge.Anchored = true
 		wedge.Parent = workspace
 
-		local partB = makePart(
-			CFrame.new(0, 2, 6) * CFrame.Angles(math.rad(30), 0, 0),
-			Vector3.new(4, 4, 2)
-		)
+		local partB = makePart(CFrame.new(0, 2, 6) * CFrame.Angles(math.rad(30), 0, 0), Vector3.new(4, 4, 2))
 		local faceA: doExtend.Face = {
 			Object = wedge,
 			Normal = Enum.NormalId.Back,

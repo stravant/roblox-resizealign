@@ -5,6 +5,7 @@ local React = require(Packages.React)
 
 local Colors = require("./PluginGui/Colors")
 local Settings = require("./Settings")
+local SplineJoin = require("./SplineJoin")
 local ShapeUtils = require("./ShapeUtils")
 
 local e = React.createElement
@@ -21,7 +22,7 @@ local FILLER_COLOR = Color3.fromRGB(80, 200, 50)
 -- Geometry helpers (mirrors doExtend logic for demo computation)
 --------------------------------------------------------------------------------
 
-local function getFaceCorners(cf: CFrame, size: Vector3, normalId: Enum.NormalId): {Vector3}
+local function getFaceCorners(cf: CFrame, size: Vector3, normalId: Enum.NormalId): { Vector3 }
 	local hsize = size / 2
 	local faceDir = Vector3.fromNormalId(normalId)
 	local ax, bx = otherNormals(faceDir)
@@ -42,7 +43,7 @@ local function getFaceBasis(cf: CFrame, size: Vector3, normalId: Enum.NormalId):
 	return cf:PointToWorldSpace(faceDir * hsize), cf:VectorToWorldSpace(faceDir)
 end
 
-local function maxPointToPlane(basePoint: Vector3, normal: Vector3, points: {Vector3}): Vector3
+local function maxPointToPlane(basePoint: Vector3, normal: Vector3, points: { Vector3 }): Vector3
 	local best = -math.huge
 	local result = points[1]
 	for _, p in points do
@@ -55,7 +56,7 @@ local function maxPointToPlane(basePoint: Vector3, normal: Vector3, points: {Vec
 	return result
 end
 
-local function minPointToPlane(basePoint: Vector3, normal: Vector3, points: {Vector3}): Vector3
+local function minPointToPlane(basePoint: Vector3, normal: Vector3, points: { Vector3 }): Vector3
 	local best = math.huge
 	local result = points[1]
 	for _, p in points do
@@ -91,9 +92,7 @@ type FaceSpec = {
 	face: Enum.NormalId,
 }
 
-local function computeDemoDeltas(
-	fA: FaceSpec, fB: FaceSpec, mode: ResizeMode
-): (number, number, any?)
+local function computeDemoDeltas(fA: FaceSpec, fB: FaceSpec, mode: ResizeMode): (number, number, any?, Vector3)
 	local pointsA = getFaceCorners(fA.cf, fA.size, fA.face)
 	local pointsB = getFaceCorners(fB.cf, fB.size, fB.face)
 	local dirA = fA.cf:VectorToWorldSpace(Vector3.fromNormalId(fA.face))
@@ -155,8 +154,12 @@ local function computeDemoDeltas(
 		local minV, maxV = math.huge, -math.huge
 		for _, v in newPointsB do
 			local proj = (v - extendPointA):Dot(dirA)
-			if proj < minV then minV = proj end
-			if proj > maxV then maxV = proj end
+			if proj < minV then
+				minV = proj
+			end
+			if proj > maxV then
+				maxV = proj
+			end
 		end
 		lenA += -(maxV - minV)
 	end
@@ -180,7 +183,13 @@ local function computeDemoDeltas(
 			crossAxis = crossAxis.Unit
 		end
 
-		local function computeWedge(fSpec: FaceSpec, dirSelf: Vector3, dirOther: Vector3, innerLen: number, extraLen: number)
+		local function computeWedge(
+			fSpec: FaceSpec,
+			dirSelf: Vector3,
+			dirOther: Vector3,
+			innerLen: number,
+			extraLen: number
+		)
 			local axisF = Vector3.fromNormalId(fSpec.face)
 			local sizeAxisF = Vector3.new(math.abs(axisF.X), math.abs(axisF.Y), math.abs(axisF.Z))
 			local newCF = fSpec.cf * CFrame.new(axisF * (innerLen / 2))
@@ -209,11 +218,7 @@ local function computeDemoDeltas(
 			local perpHalf = math.abs(perpTangent_local:Dot(newSize)) / 2
 
 			return {
-				CFrame = CFrame.fromMatrix(
-					facePoint + dirSelf * extraLen / 2,
-					dirSelf:Cross(outerDir),
-					dirSelf
-				),
+				CFrame = CFrame.fromMatrix(facePoint + dirSelf * extraLen / 2, dirSelf:Cross(outerDir), dirSelf),
 				Size = Vector3.new(2 * crossHalf, extraLen, 2 * perpHalf),
 			}
 		end
@@ -311,6 +316,7 @@ local RT_CAM = CFrame.lookAt(Vector3.new(0.7, -0.3, 3.2), Vector3.new(0.7, -0.3,
 
 local function buildDemo(fA: FaceSpec, fB: FaceSpec, cam: CFrame, mode: ResizeMode)
 	local deltaA, deltaB, fillerData, highlightPoint = computeDemoDeltas(fA, fB, mode)
+
 	return {
 		cameraCFrame = cam,
 		partAStart = { CFrame = fA.cf, Size = fA.size },
@@ -322,11 +328,80 @@ local function buildDemo(fA: FaceSpec, fB: FaceSpec, cam: CFrame, mode: ResizeMo
 	}
 end
 
-local DEMO_DATA: { [ResizeMode]: any } = {
+local function buildRoundedDemo()
+	local fA, fB = ANG_A, ANG_B
+	local deltaA, deltaB, fillerData = computeDemoDeltas(fA, fB, "RoundedJoin")
+	local normalA = fA.cf:VectorToWorldSpace(Vector3.fromNormalId(fA.face))
+	local normalB = fB.cf:VectorToWorldSpace(Vector3.fromNormalId(fB.face))
+	local angle = math.acos(math.clamp(-normalA:Dot(normalB), -1, 1))
+	local setback = fillerData.Size.Y / 2 * math.tan(angle / 2)
+	deltaA -= setback
+	deltaB -= setback
+	local pointA = getFaceBasis(fA.cf, fA.size, fA.face) + normalA * deltaA
+	local pointB = getFaceBasis(fB.cf, fB.size, fB.face) + normalB * deltaB
+	local start = CFrame.new(pointA) * fA.cf.Rotation
+	local finish = SplineJoin.getTargetPoint(
+		start,
+		CFrame.new(pointB) * fB.cf.Rotation,
+		fA.size,
+		fB.size,
+		Vector3.fromNormalId(fA.face),
+		Vector3.fromNormalId(fB.face)
+	)
+	local template = Instance.new("Part")
+	template.Size = fA.size
+	fillerData = {
+		segments = SplineJoin.plan(template, start, finish, normalB, Vector3.fromNormalId(fA.face), 6),
+	}
+	template:Destroy()
+	return {
+		cameraCFrame = ANG_CAM,
+		partAStart = { CFrame = fA.cf, Size = fA.size },
+		partAEnd = computeExtended(fA.cf, fA.size, fA.face, deltaA),
+		partBStart = { CFrame = fB.cf, Size = fB.size },
+		partBEnd = computeExtended(fB.cf, fB.size, fB.face, deltaB),
+		filler = fillerData,
+	}
+end
+
+-- Scene data, including the planned green parts, is built once at module load.
+local function buildSplineDemo()
+	local direction = Vector3.new(1, 1, 0).Unit
+	local rotation = CFrame.Angles(0, 0, math.pi / 4)
+	-- Spline Join leaves both parts as they are, so they have one state and
+	-- the spline runs between their selected faces
+	local partA = { CFrame = CFrame.new(-2.25, -0.2, 0), Size = Vector3.new(1.5, 1, 0.8) }
+	local partB = { CFrame = CFrame.new(Vector3.new(0.8, 0.6, 0) + direction * 1.65) * rotation, Size = Vector3.new(1.9, 1, 0.8) }
+	local start = partA.CFrame:PointToWorldSpace(Vector3.new(partA.Size.X / 2, 0, 0))
+	local finish = partB.CFrame:PointToWorldSpace(Vector3.new(-partB.Size.X / 2, 0, 0))
+
+	local template = Instance.new("Part")
+	template.Size = Vector3.new(1, 1, 0.8)
+	local demo = {
+		-- Further back than the other scenes, to fit the parts and the gap
+		-- between them that the spline has to cross
+		cameraCFrame = CFrame.lookAt(Vector3.new(0.1, 0.55, 5), Vector3.new(0.1, 0.55, 0)),
+		partAStart = partA,
+		partAEnd = partA,
+		partBStart = partB,
+		partBEnd = partB,
+		filler = {
+			segments = SplineJoin.plan(template, CFrame.new(start), finish, -direction, Vector3.xAxis, 24),
+		},
+	}
+	template:Destroy()
+	return demo
+end
+
+export type PreviewMode = ResizeMode | "RoundedJoinCylinder"
+
+local DEMO_DATA: { [PreviewMode]: any } = {
 	OuterTouch = buildDemo(ANG_A, ANG_B, ANG_CAM, "OuterTouch"),
 	InnerTouch = buildDemo(ANG_A, ANG_B, ANG_CAM, "InnerTouch"),
 	WedgeJoin = buildDemo(ANG_A, ANG_B, ANG_CAM, "WedgeJoin"),
-	RoundedJoin = buildDemo(ANG_A, ANG_B, ANG_CAM, "RoundedJoin"),
+	RoundedJoin = buildRoundedDemo(),
+	RoundedJoinCylinder = buildDemo(ANG_A, ANG_B, ANG_CAM, "RoundedJoin"),
+	SplineJoin = buildSplineDemo(),
 	ButtJoint = buildDemo(RT_A, RT_B, RT_CAM, "ButtJoint"),
 	ExtendUpTo = buildDemo(ANG_A, ANG_B, ANG_CAM, "ExtendUpTo"),
 	ExtendInto = buildDemo(ANG_A, ANG_B, ANG_CAM, "ExtendInto"),
@@ -336,15 +411,20 @@ local DEMO_DATA: { [ResizeMode]: any } = {
 -- ModeDemo React component
 --------------------------------------------------------------------------------
 
-local function ModeDemo(props: {
-	ResizeMode: ResizeMode,
+type PreviewProps = {
+	PreviewMode: PreviewMode,
+	JoinedLeft: boolean?,
+	OpenBelow: boolean?,
 	Animate: boolean?,
 	Size: UDim2?,
 	LayoutOrder: number?,
-})
-	local mode = props.ResizeMode
+}
+
+local function ModeDemo(props: PreviewProps)
+	local mode = props.PreviewMode
 	local animate = if props.Animate ~= nil then props.Animate else true
 	local data = DEMO_DATA[mode]
+	local curved = data.filler ~= nil and data.filler.segments ~= nil
 
 	local viewportRef = React.useRef(nil :: any)
 	local cameraRef = React.useRef(nil :: any)
@@ -352,7 +432,35 @@ local function ModeDemo(props: {
 	local partBRef = React.useRef(nil :: any)
 	local fillerRef = React.useRef(nil :: any)
 	local filler2Ref = React.useRef(nil :: any)
+	local curveRefs = React.useRef({} :: { [number]: Part })
 	local highlightRef = React.useRef(nil :: any)
+	local highlightBRef = React.useRef(nil :: Part?)
+
+	local function updateCurve(progress: number)
+		if not data.filler or not data.filler.segments then
+			return
+		end
+		local segments = data.filler.segments
+		local highlightA, highlightB = highlightRef.current, highlightBRef.current
+		if highlightA then
+			highlightA.Transparency = 1 - progress
+		end
+		if highlightB then
+			highlightB.Transparency = 1 - progress
+		end
+		for i, segment in segments do
+			local part = curveRefs.current[i]
+			if not part then
+				continue
+			end
+			local fraction = math.clamp(progress * #segments - i + 1, 0, 1)
+			part.Transparency = if fraction > 0 then 0 else 1
+			if fraction > 0 then
+				part.Size = Vector3.new(segment.Size.X * fraction, segment.Size.Y, segment.Size.Z)
+				part.CFrame = segment.CFrame * CFrame.new(-segment.Size.X * (1 - fraction) / 2, 0, 0)
+			end
+		end
+	end
 
 	-- Link camera to viewport after each render
 	React.useEffect(function()
@@ -373,6 +481,7 @@ local function ModeDemo(props: {
 		local filler = fillerRef.current
 		local filler2 = filler2Ref.current
 		local highlight = highlightRef.current
+		updateCurve(1)
 		if partA then
 			partA.CFrame = data.partAEnd.CFrame
 			partA.Size = data.partAEnd.Size
@@ -390,7 +499,7 @@ local function ModeDemo(props: {
 		if highlight then
 			highlight.Transparency = 0
 		end
-	end, { animate, mode } :: { any })
+	end, { animate, data } :: { any })
 
 	-- Animation loop, only runs when animate is true
 	React.useEffect(function()
@@ -409,7 +518,7 @@ local function ModeDemo(props: {
 					task.wait(0.1)
 					continue
 				end
-
+				updateCurve(0)
 				-- Snap to start state
 				partA.CFrame = data.partAStart.CFrame
 				partA.Size = data.partAStart.Size
@@ -427,11 +536,13 @@ local function ModeDemo(props: {
 
 				task.wait(0.6)
 
-				-- Animate to end state
-				local STEPS = 20
-				local ANIM_TIME = 0.4
-				for i = 1, STEPS do
-					local t = i / STEPS
+				-- Animate to end state, for the modes that move their parts
+				local STEPS = if curved then 24 else 20
+				local ANIM_TIME = if curved then 0.6 else 0.4
+				local partsMove = data.partAStart ~= data.partAEnd or data.partBStart ~= data.partBEnd
+				for i = 1, if partsMove then STEPS else 0 do
+					local progress = i / STEPS
+					local t = if curved then progress * progress * (3 - 2 * progress) else progress
 					partA.CFrame = data.partAStart.CFrame:Lerp(data.partAEnd.CFrame, t)
 					partA.Size = data.partAStart.Size:Lerp(data.partAEnd.Size, t)
 					partB.CFrame = data.partBStart.CFrame:Lerp(data.partBEnd.CFrame, t)
@@ -445,6 +556,13 @@ local function ModeDemo(props: {
 					task.wait(ANIM_TIME / STEPS)
 				end
 
+				if data.filler and data.filler.segments then
+					for i = 1, 24 do
+						local t = i / 24
+						updateCurve(t * t * (3 - 2 * t))
+						task.wait(0.4 / 24)
+					end
+				end
 				-- Show highlight at intersection point
 				if highlight then
 					highlight.Transparency = 0
@@ -458,7 +576,7 @@ local function ModeDemo(props: {
 		return function()
 			task.cancel(thread)
 		end
-	end, { animate, mode } :: { any })
+	end, { animate, data } :: { any })
 
 	-- Use end state for initial render when not animating
 	local initA = if animate then data.partAStart else data.partAEnd
@@ -519,8 +637,23 @@ local function ModeDemo(props: {
 					BottomSurface = Enum.SurfaceType.Smooth,
 				})
 			end
+		elseif data.filler.segments then
+			local parts = {}
+			for i, segment in data.filler.segments do
+				parts[i] = e("Part", {
+					ref = function(part: Part?)
+						curveRefs.current[i] = part
+					end,
+					Anchored = true,
+					CFrame = segment.CFrame,
+					Size = segment.Size,
+					Color = FILLER_COLOR,
+					Material = Enum.Material.SmoothPlastic,
+					Transparency = initFillerTransparency,
+				})
+			end
+			worldChildren.Filler = e("Model", {}, parts)
 		else
-			-- RoundedJoin: render cylinder
 			worldChildren.Filler = e("Part", {
 				ref = fillerRef,
 				Anchored = true,
@@ -536,18 +669,39 @@ local function ModeDemo(props: {
 		end
 	end
 
+	local highlightPoint = if curved
+		then data.partAEnd.CFrame:PointToWorldSpace(
+			Vector3.new(data.partAEnd.Size.X / 2, -data.partAEnd.Size.Y / 2, data.partAEnd.Size.Z / 2 + 0.1)
+		)
+		else data.highlightPoint
 	worldChildren.Highlight = e("Part", {
 		ref = highlightRef,
 		Anchored = true,
 		Shape = Enum.PartType.Ball,
-		CFrame = CFrame.new(data.highlightPoint),
+		CFrame = CFrame.new(highlightPoint),
 		Size = Vector3.new(0.28, 0.28, 0.28),
 		Color = Color3.fromRGB(255, 255, 80),
 		Material = Enum.Material.Neon,
 		Transparency = initHighlightTransparency,
 	})
 
+	if curved then
+		worldChildren.HighlightB = e("Part", {
+			ref = highlightBRef,
+			Anchored = true,
+			Shape = Enum.PartType.Ball,
+			CFrame = data.partBEnd.CFrame
+				* CFrame.new(-data.partBEnd.Size.X / 2, -data.partBEnd.Size.Y / 2, data.partBEnd.Size.Z / 2 + 0.1),
+			Size = Vector3.new(0.28, 0.28, 0.28),
+			Color = Color3.fromRGB(255, 255, 80),
+			Material = Enum.Material.Neon,
+			Transparency = initHighlightTransparency,
+		})
+	end
+
 	return e("ViewportFrame", {
+		ZIndex = 1,
+		ClipsDescendants = true,
 		ref = viewportRef,
 		Size = props.Size or UDim2.fromScale(1, 1),
 		BackgroundColor3 = Colors.GREY,
@@ -559,7 +713,10 @@ local function ModeDemo(props: {
 		LayoutOrder = props.LayoutOrder,
 	}, {
 		Corner = e("UICorner", {
-			CornerRadius = UDim.new(0, 4),
+			TopLeftRadius = UDim.new(0, if props.JoinedLeft then 0 else 4),
+			BottomLeftRadius = UDim.new(0, if props.JoinedLeft or props.OpenBelow then 0 else 4),
+			TopRightRadius = UDim.new(0, 4),
+			BottomRightRadius = UDim.new(0, if props.OpenBelow then 0 else 4),
 		}),
 		Camera = e("Camera", {
 			ref = cameraRef,
